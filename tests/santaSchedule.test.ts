@@ -30,6 +30,10 @@ describe('isSantaWindow', () => {
 });
 
 describe('nextSantaDelayMs', () => {
+  it('config keeps the agreed ranges (30-120 s first, 5-10 min after)', () => {
+    expect(SANTA_FIRST_DELAY_MS).toEqual({ min: 30_000, max: 120_000 });
+    expect(SANTA_INTERVAL_MS).toEqual({ min: 300_000, max: 600_000 });
+  });
   it('uses the 5 to 10 minute interval after the first appearance', () => {
     expect(nextSantaDelayMs(() => 0, false)).toBe(SANTA_INTERVAL_MS.min);
     const hi = nextSantaDelayMs(() => 0.999999, false);

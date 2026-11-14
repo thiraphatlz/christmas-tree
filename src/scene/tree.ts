@@ -61,7 +61,8 @@ type Slot = readonly [h: number, v: number];
 function toPx(s: TreeShape, [h, v]: Slot, margin: number): [number, number] | null {
   const y = -Math.round(s.trunkHeight + 1 + h * (s.height - s.trunkHeight));
   const hw = halfWidthAt(s, y) - margin;
-  return hw < 0 ? null : [Math.round(v * hw), y];
+  // ไม่มีใบที่แถวนี้ = วางไม่ได้, ใบแคบกว่า margin = วางชิดแกนลำต้น
+  return hw + margin <= 0 ? null : [Math.round(v * Math.max(0, hw)), y];
 }
 
 /**

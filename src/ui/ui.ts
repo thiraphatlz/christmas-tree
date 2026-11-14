@@ -64,7 +64,11 @@ export function initUI(app: AppController): UI {
     if (!root.classList.contains('immersive')) return;
     root.classList.add('pointer-active');
     clearTimeout(idleTimer);
-    idleTimer = window.setTimeout(() => root.classList.remove('pointer-active'), IDLE_HIDE_MS);
+    idleTimer = window.setTimeout(() => {
+      // ปุ่มลอยที่กำลังโฟกัสด้วยคีย์บอร์ดต้องไม่หายไปเอง
+      if (el('floating').contains(document.activeElement)) wake();
+      else root.classList.remove('pointer-active');
+    }, IDLE_HIDE_MS);
   }
 
   function applyImmersive(): void {
@@ -133,6 +137,7 @@ export function initUI(app: AppController): UI {
   }
   document.addEventListener('visibilitychange', () => void syncWakeLock());
   document.addEventListener('fullscreenchange', () => {
+    if (!isApiFullscreen()) clean = false; // Esc ครั้งเดียวออกทั้งเต็มจอและ clean view
     refreshF11();
     void syncWakeLock();
   });
@@ -205,7 +210,9 @@ function initDebug(app: AppController, now: Date): void {
   const dayIndex = Math.round((new Date(year, now.getMonth(), now.getDate()).getTime() - new Date(year, 10, 25).getTime()) / 86_400_000);
   date.value = String(dayIndex);
   time.value = String(now.getHours() * 60 + now.getMinutes());
-  show();
+  // วันที่อยู่นอกช่วงสไลเดอร์: ใช้ค่าที่ถูกปัดจริง ๆ เพื่อให้ป้ายตรงกับฉาก
+  if (dayIndex < +date.min || dayIndex > +date.max) apply();
+  else show();
 
   date.addEventListener('input', apply);
   time.addEventListener('input', apply);

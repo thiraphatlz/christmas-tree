@@ -8,6 +8,10 @@ import type { SceneLayer, TreeShape } from '../types';
 const COLORS = PALETTE.lights;
 const DIM = COLORS.map((c) => mixColor(c, PALETTE.leafDark, 0.55)); // สีหลอดตอนหรี่
 const MAX = lightCount(GROW_DAYS);
+/** จำนวนซิกแซกคงที่ (ค่าของต้นวันที่ 25) หลอดเดิมจึงไม่สลับข้างเมื่อต้นโต */
+const ZIGS = 10;
+/** ซ่อนไฟระหว่างเอฟเฟกต์ต้นโต (เท่ากับ POP_MS ใน tree.ts) เพราะต้นถูกย่อ/ยืดชั่วคราว */
+const HIDE_MS = 1300;
 
 /** คลื่นสามเหลี่ยม คาบ 2 ช่วงค่า -1..1 */
 const tri = (s: number) => {
@@ -25,10 +29,16 @@ export function createLights(): SceneLayer {
   let bulbs: Float32Array | null = null;
   let colorIdx: Uint8Array | null = null;
   let bulbSeed = 0;
+  let prevDay = -1;
+  let hideUntil = -Infinity;
 
   return {
     render(p) {
       const { ctx, tree, seed } = p;
+      if (prevDay >= 0 && p.day > prevDay && !p.reducedMotion) hideUntil = p.timeMs + HIDE_MS;
+      else if (p.day < prevDay) hideUntil = -Infinity;
+      prevDay = p.day;
+      if (p.timeMs < hideUntil) return;
       const count = Math.min(MAX, lightCount(p.day));
       if (count === 0 || tree.tiers.length === 0) return;
       const yTop = -tree.height + 2;
@@ -51,18 +61,23 @@ export function createLights(): SceneLayer {
         }
       }
 
-      const zigs = Math.max(1, Math.round(rows / 8));
+      const zigs = ZIGS;
       const ox = p.centerX;
       const oy = p.groundY;
 
       // สายไฟ: ต่อแต่ละแถวกับแถวก่อนหน้าด้วยเส้นแนวนอน ให้เป็นขั้นบันไดต่อเนื่อง
-      ctx.fillStyle = PALETTE.leafDark;
-      let prev = wireX(tree, yTop, 0, zigs);
-      for (let y = yTop; y <= yBot; y++) {
-        const x = wireX(tree, y, (y - yTop) / rows, zigs);
-        const lo = Math.min(prev, x);
-        ctx.fillRect(ox + lo, oy + y, Math.abs(x - prev) + 1, 1);
-        prev = x;
+      // ต้นเล็กเกินไป (ซิกแซกถี่กว่า 4 แถว) ไม่วาดสาย เหลือแต่หลอด
+      if (rows / zigs >= 4) {
+        ctx.fillStyle = PALETTE.leafDark;
+        let prev = wireX(tree, yTop, 0, zigs);
+        for (let y = yTop; y <= yBot; y++) {
+          const x = wireX(tree, y, (y - yTop) / rows, zigs);
+          // จำกัดปลายทั้งสองไม่ให้ยื่นพ้นใบของแถวนี้
+          const lim = Math.max(0, Math.floor(halfWidthAt(tree, y)) - 1);
+          const a = Math.max(-lim, Math.min(lim, prev));
+          ctx.fillRect(ox + Math.min(a, x), oy + y, Math.abs(x - a) + 1, 1);
+          prev = x;
+        }
       }
 
       // หลอดไฟ

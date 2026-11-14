@@ -80,7 +80,7 @@ describe('halfWidthAt', () => {
     expect(halfWidthAt(s, -(s.trunkHeight - 1))).toBe(0);
   });
   it('is positive inside the foliage', () => {
-    for (const t of s.tiers) expect(halfWidthAt(s, t.bottomY)).toBeGreaterThan(0);
+    for (const t of s.tiers) expect(halfWidthAt(s, t.bottomY - 1)).toBeGreaterThan(0);
     expect(halfWidthAt(s, -s.trunkHeight - 2)).toBeGreaterThan(0);
   });
   it('is 0 for a bare seed', () => {

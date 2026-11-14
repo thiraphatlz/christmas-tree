@@ -25,7 +25,8 @@ function makeGift(seed: number, i: number): Gift {
   let near = back ? 1 : 5;
   for (let j = i - 4; j >= 0; j -= 4) near += maxW(j);
   near += randInt(r(2), 0, maxW(i) - w);
-  const x = i % 2 === 0 ? -(near + w) : near;
+  // +1 ทางซ้ายให้สมมาตรรอบแกนลำต้น (ลำต้นอยู่กึ่งกลางที่ x = 0)
+  const x = i % 2 === 0 ? -(near + w) + 1 : near;
 
   // สีวนตาม index (กล่องข้างเคียงสีไม่ซ้ำ) จุดเริ่มมาจาก seed
   const colors = PALETTE.giftColors;

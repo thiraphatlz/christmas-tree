@@ -40,17 +40,32 @@ main agent (ไม่ว่าโมเดลไหน) ทำหน้าที
 | Agent | ไฟล์ | โมเดล | สถานะ |
 |---|---|---|---|
 | main | สัญญากลางด้านบน | - | เสร็จ |
-| tree | `src/scene/tree.ts` | inherit | ยังไม่เริ่ม |
-| effects | `src/core/daylight.ts`, `src/scene/sky.ts`, `snow.ts`, `lights.ts` | inherit | ยังไม่เริ่ม |
-| gifts | `src/scene/gifts.ts` | inherit | ยังไม่เริ่ม |
-| easter-egg | `src/core/santaSchedule.ts`, `src/scene/santa.ts` | inherit | ยังไม่เริ่ม |
-| ui | `src/ui/*`, `src/audio/*`, `index.html`, `src/style.css` | inherit | ยังไม่เริ่ม |
-| tests | `tests/*` | Sonnet 5.5 | ยังไม่เริ่ม |
-| deploy | `wrangler.jsonc`, `README.md`, `CREDITS.md` | Sonnet 5.5 | ยังไม่เริ่ม |
+| tree | `src/scene/tree.ts` | inherit | เสร็จ รีวิวแล้ว |
+| effects | `src/core/daylight.ts`, `src/scene/sky.ts`, `snow.ts`, `lights.ts` | inherit | เสร็จ รีวิวแล้ว |
+| gifts | `src/scene/gifts.ts` | inherit | เสร็จ รีวิวแล้ว |
+| easter-egg | `src/core/santaSchedule.ts`, `src/scene/santa.ts` | inherit | เสร็จ รีวิวแล้ว |
+| ui | `src/ui/*`, `src/audio/*`, `index.html`, `src/style.css` | inherit | เสร็จ รีวิวแล้ว |
+| tests | `tests/*` (86 tests) | Sonnet 5.5 | เสร็จ รีวิวแล้ว |
+| deploy | `wrangler.jsonc`, `README.md`, `CREDITS.md` | Sonnet 5.5 | เสร็จ รีวิวแล้ว |
 
-## สิ่งที่ต้องทำต่อ
+## ขั้นที่เสร็จแล้ว
 
-- [ ] แจกงานให้ 7 agents (ทำงานขนาน แต่ละตัวแตะเฉพาะไฟล์ของตัวเอง ไม่ commit เอง)
-- [ ] รวมงาน รัน `npm test` และ `npm run build`
-- [ ] รีวิวข้ามโมดูล
-- [ ] ตรวจหน้าตาที่วันที่ 1, 10, 20, 25 ธ.ค. กลางวัน/กลางคืน, ช่วงซานต้า, โหมดเต็มจอ
+- [x] แจกงานให้ 7 agents และรวมงาน
+- [x] `npm test` (86/86) และ `npm run build` ผ่าน
+- [x] รีวิวข้ามโมดูล 2 รอบ (ฉาก, UI/ซานต้า/เสียง/tests/deploy) และแก้ตามที่พบ
+- [x] ตรวจหน้าตาในเบราว์เซอร์: ก่อน 1 ธ.ค., วันที่ 1, 10, 12, 20, 25 กลางวัน/กลางคืน/พลบค่ำ, `?santa=now`, clean view, เต็มจอ, จอแนวตั้ง
+
+## สิ่งที่แก้หลังรีวิว
+
+- `halfWidthAt` ไม่นับแถว `bottomY` (ตรงกับที่ต้นไม้วาดจริง) ของตกแต่งและไฟจึงไม่ลอยนอกใบ
+- ไฟประดับใช้จำนวนซิกแซกคงที่ หลอดเดิมไม่สลับข้างเมื่อต้นโต และซ่อนไฟระหว่างเอฟเฟกต์ต้นโต
+- สไลเดอร์ debug, ปุ่มลอยตอนโฟกัสคีย์บอร์ด, Esc หลัง H+F, ป้ายชื่อ canvas, test ยืนยันค่าช่วงเวลาซานต้า
+
+## สิ่งที่ยังไม่ได้ทำ / ต้องให้เจ้าของตัดสินใจ
+
+- [ ] merge `feat/site` เข้า `main` แล้ว push (ยังไม่ได้ push อะไรเลย)
+- [ ] ต่อ repo กับ Cloudflare Workers Builds ใน dashboard ตามขั้นตอนใน README
+- [ ] ยังไม่ได้ดูด้วยตา: ซานต้าโผล่เองตามตัวจับเวลา, F11 ของเบราว์เซอร์, เครื่องมือถือจริง, prefers-reduced-motion
+- [ ] เลือกไฟล์เสียง (พื้นหลังวนซ้ำ และ "โฮ่ โฮ่ โฮ่") แล้วใส่ใน `AudioManager` พร้อมจด license ใน `CREDITS.md`
+- รู้อยู่แล้ว: สายไฟสีเขียวเข้มวาดทับลูกบอลบางลูก (ถ้าไม่ชอบ ให้แยกชั้นของตกแต่งไปวาดหลังไฟ)
+- รู้อยู่แล้ว: wrangler ไม่ได้อยู่ใน devDependencies (Workers Builds เรียกผ่าน `npx`) ถ้าอยากตรึงเวอร์ชันให้เพิ่มเอง

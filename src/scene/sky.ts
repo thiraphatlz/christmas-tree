@@ -110,7 +110,7 @@ export function createSky(): SceneLayer {
       const bodyY = Math.max(3, Math.round(groundY * 0.05));
       if (dark > 0.02) {
         ctx.globalAlpha = dark;
-        drawSprite(ctx, MOON, MOON_LEGEND, Math.round(width * 0.8) - 4, bodyY);
+        drawSprite(ctx, MOON, MOON_LEGEND, Math.round(width * 0.68) - 4, bodyY);
       }
       if (dark < 0.98) {
         ctx.globalAlpha = 1 - dark;

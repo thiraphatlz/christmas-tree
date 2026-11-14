@@ -72,7 +72,8 @@ export function getTreeShape(day: number): TreeShape {
 export function halfWidthAt(shape: TreeShape, y: number): number {
   let best = 0;
   for (const t of shape.tiers) {
-    if (y > t.bottomY || y < t.topY) continue;
+    // ชั้นใบถูกวาดที่แถว topY <= y < bottomY (ไม่รวม bottomY)
+    if (y >= t.bottomY || y < t.topY) continue;
     const k = t.bottomY === t.topY ? 0 : (t.bottomY - y) / (t.bottomY - t.topY);
     best = Math.max(best, t.bottomHalf + (t.topHalf - t.bottomHalf) * k);
   }
