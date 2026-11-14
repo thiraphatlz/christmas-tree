@@ -10,9 +10,15 @@ export const GROW_DAYS = 25;
 export const SCENE_TARGET_HEIGHT = 180;
 export const SCENE_MIN_WIDTH = 120;
 
-/** ต้นไม้: ความสูง (ไม่รวมดาว) ของวันที่ 1 และวันที่ 25 */
-export const TREE_MIN_HEIGHT = 6;
-export const TREE_MAX_HEIGHT = 96;
+/**
+ * ขนาดต้นไม้เทียบความสูงจอ (ไม่รวมดาว): วันที่ 1 สูง 25% วันที่ 25 สูง 80% (รวมดาวราว 85%)
+ * จอแนวตั้งจำกัดด้วยความกว้าง: ต้นกว้างไม่เกิน 90% ของจอ
+ */
+export const TREE_HEIGHT_FRAC_START = 0.25;
+export const TREE_HEIGHT_FRAC_FULL = 0.8;
+export const TREE_MAX_WIDTH_FRAC = 0.9;
+/** ความสูงต้นเต็มในหน่วยอ้างอิง: layout ของขวัญและค่า default ของ getTreeShape ใช้หน่วยนี้ แล้วคูณ scale ตอนวาด */
+export const TREE_REF_HEIGHT = 96;
 
 /** ของขวัญ: วันแรกที่มีกล่อง (วันที่ 10 = progress 0.4) แล้วเพิ่มวันละกล่อง */
 export const GIFT_START_DAY = 10;

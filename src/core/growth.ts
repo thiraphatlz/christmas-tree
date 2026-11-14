@@ -1,4 +1,4 @@
-import { GIFT_START_DAY, GROW_DAYS, TREE_MAX_HEIGHT, TREE_MIN_HEIGHT } from '../config';
+import { GIFT_START_DAY, GROW_DAYS, TREE_HEIGHT_FRAC_FULL, TREE_HEIGHT_FRAC_START, TREE_REF_HEIGHT } from '../config';
 import type { TreeShape, TreeTier } from '../types';
 
 // ตารางการเติบโต: ทุกค่าเป็น pure function ของ day (0..25) และไม่ลดลงเมื่อ day เพิ่ม
@@ -6,11 +6,25 @@ import type { TreeShape, TreeTier } from '../types';
 
 const clampDay = (day: number) => Math.max(0, Math.min(GROW_DAYS, Math.floor(day)));
 
-/** ความสูงต้น (logical px, ไม่รวมดาว): วันที่ 0 = 0, วันที่ 1 = 6, วันที่ 25 = 96 */
-export function treeHeight(day: number): number {
+/**
+ * ความสูงต้น (logical px, ไม่รวมดาว) เมื่อต้นเต็มสูง max: วันที่ 0 = 0, วันที่ 25 = max
+ * วันที่ 1 = max * (25% / 80%) แล้วโตเป็นเส้นตรงทุกวัน
+ */
+export function treeHeight(day: number, max: number = TREE_REF_HEIGHT): number {
   const d = clampDay(day);
   if (d === 0) return 0;
-  return Math.round(TREE_MIN_HEIGHT + ((d - 1) * (TREE_MAX_HEIGHT - TREE_MIN_HEIGHT)) / (GROW_DAYS - 1));
+  const start = TREE_HEIGHT_FRAC_START / TREE_HEIGHT_FRAC_FULL;
+  return Math.round(max * (start + ((1 - start) * (d - 1)) / (GROW_DAYS - 1)));
+}
+
+/** จำนวนเส้น tinsel/garland พาดต้น: เริ่มวันที่ 8 เพิ่มทุก 3 วัน (วันที่ 25 = 6) */
+export function tinselCount(day: number): number {
+  return Math.max(0, Math.floor((clampDay(day) - 5) / 3));
+}
+
+/** ผ้ารองโคนต้นมาวันที่ 4 */
+export function hasSkirt(day: number): boolean {
+  return clampDay(day) >= 4;
 }
 
 /** จำนวนชั้นใบ: 1 ชั้นตั้งแต่วันที่ 1 เพิ่มทุก 4 วัน สูงสุด 6 ชั้น (วันที่ 21) */
@@ -44,10 +58,10 @@ export function hasStar(day: number): boolean {
   return clampDay(day) >= GROW_DAYS;
 }
 
-/** รูปทรงต้นไม้ของวันนั้น (พิกัดเทียบโคนต้น ดู TreeShape) */
-export function getTreeShape(day: number): TreeShape {
+/** รูปทรงต้นไม้ของวันนั้น เมื่อต้นเต็มสูง max (พิกัดเทียบโคนต้น ดู TreeShape) */
+export function getTreeShape(day: number, max: number = TREE_REF_HEIGHT): TreeShape {
   const d = clampDay(day);
-  const height = treeHeight(d);
+  const height = treeHeight(d, max);
   const n = tierCount(d);
   const trunkHeight = height === 0 ? 0 : Math.max(2, Math.round(height * 0.12));
   const trunkHalf = height === 0 ? 0 : Math.max(1, Math.round(height * 0.04));

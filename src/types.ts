@@ -75,7 +75,16 @@ export interface SceneParams {
   day: number;
   /** day / 25 */
   progress: number;
+  /** รูปทรงต้นของเฟรมนี้ (ถูกย่อ/ยืดแล้วระหว่างเอฟเฟกต์โต) ทุก layer วาดตาม shape นี้ */
   tree: TreeShape;
+  /** ความสูงต้นเต็ม (วันที่ 25, ไม่รวมดาว) ของจอนี้ หน่วย logical px */
+  treeMax: number;
+  /** treeMax / TREE_REF_HEIGHT: ตัวคูณขนาดของตกแต่งให้สัมพันธ์กับต้น (จอ 180px ได้ราว 1.5) */
+  scale: number;
+  /** ตัวคูณของ layoutGifts (หน่วยอ้างอิง) = scale แต่ถูกจำกัดให้กล่องทั้งหมดไม่ล้นจอแคบ */
+  giftScale: number;
+  /** 0..1 ระหว่างเอฟเฟกต์ต้นโตขึ้นขั้นใหม่, null = ไม่ได้เล่น */
+  growT: number | null;
   daylight: DaylightState;
   reducedMotion: boolean;
   seed: number;
@@ -124,22 +133,18 @@ export interface AppState {
   progress: number;
   daylightMode: DaylightMode;
   daylight: DaylightState;
-  /** มี ?debug=1 */
-  debug: boolean;
 }
 
-/** สิ่งที่ main เปิดให้ UI เรียก */
+/** ตัวเรนเดอร์ฉาก (src/app.ts) ใช้ร่วมกันทั้งหน้าหลักและหน้า debug */
 export interface AppController {
   readonly canvas: HTMLCanvasElement;
   getState(): AppState;
+  /** หน้าหลักใช้ 'auto' เสมอ หน้า debug สลับได้ */
   setDaylightMode(mode: DaylightMode): void;
-  /** สไลเดอร์ debug: ตั้งวันเวลาจำลอง */
+  /** ตั้งวันเวลาจำลอง (หน้า debug) */
   setSimulatedNow(date: Date): void;
-  /** ปุ่ม debug: ให้ซานต้าโผล่ทันที */
+  /** ให้ซานต้าโผล่ทันที (หน้า debug) */
   triggerSanta(): void;
-}
-
-export interface UI {
-  /** main เรียกประมาณวินาทีละครั้ง และทันทีเมื่อ state เปลี่ยน */
-  update(state: AppState): void;
+  /** เรียก cb ทันที แล้วประมาณวินาทีละครั้ง และทุกครั้งที่ state เปลี่ยน */
+  subscribe(cb: (state: AppState) => void): void;
 }

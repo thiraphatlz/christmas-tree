@@ -10,8 +10,8 @@ describe('key days', () => {
     expect(s.tiers).toHaveLength(0);
     expect(s.hasStar).toBe(false);
   });
-  it('day 1 has height 6 and one tier', () => {
-    expect(treeHeight(1)).toBe(6);
+  it('day 1 starts at 25/80 of the full height and has one tier', () => {
+    expect(treeHeight(1)).toBe(30);
     expect(tierCount(1)).toBe(1);
   });
   it('day 25 has height 96, 6 tiers and a star; day 24 has no star', () => {
