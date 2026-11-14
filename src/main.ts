@@ -1,4 +1,10 @@
-// หน้าหลัก: มีแค่ฉาก ไม่มี UI (agent "ui-debug" เพิ่มการกระทำที่มองไม่เห็น: เต็มจอ ซ่อนเคอร์เซอร์ ปลดล็อกเสียง)
+// หน้าหลัก: มีแค่ฉาก ไม่มี UI การควบคุมทั้งหมดอยู่ที่ /debug.html
 import { createApp } from './app';
+import { initAudioUnlock, initCursorHide, initDoubleClickFullscreen, initFullscreenKey, initWakeLock } from './ui/immersive';
 
-createApp(document.getElementById('scene') as HTMLCanvasElement);
+const app = createApp(document.getElementById('scene') as HTMLCanvasElement);
+initFullscreenKey();
+initDoubleClickFullscreen(app.canvas);
+initCursorHide();
+initAudioUnlock();
+initWakeLock();

@@ -9,36 +9,6 @@
   </head>
   <body>
     <canvas id="scene" role="img" aria-label="ต้นคริสต์มาส pixel art ที่โตขึ้นทุกวัน"></canvas>
-    <div id="ui">
-      <!-- แถบบน: ข้อมูลอยู่ซ้าย ปุ่มอยู่มุมขวา (ไม่บังต้นไม้ตรงกลางล่าง) -->
-      <div id="top">
-        <section id="info" class="panel" aria-label="ความคืบหน้าของต้นคริสต์มาส">
-          <p id="info-title"></p>
-          <p id="info-count" role="timer"></p>
-        </section>
-        <div id="controls" class="buttons" role="group" aria-label="ตัวควบคุม">
-          <button type="button" class="js-daylight" title="สลับ อัตโนมัติ / กลางวัน / กลางคืน"></button>
-          <button type="button" id="btn-mute" aria-label="ปิดเสียง" title="ปิด/เปิดเสียง (M)"></button>
-          <button type="button" id="btn-fullscreen" title="เต็มจอ (F)">เต็มจอ</button>
-          <button type="button" id="btn-clean" title="ซ่อนเมนูทั้งหมด (H)">ซ่อนเมนู</button>
-        </div>
-      </div>
-
-      <!-- แผง debug แสดงเฉพาะเมื่อมี ?debug=1 -->
-      <section id="debug" class="panel" aria-label="เครื่องมือทดสอบ" hidden>
-        <label for="debug-date">วันที่จำลอง: <output id="debug-date-out" for="debug-date"></output></label>
-        <input id="debug-date" type="range" min="0" max="36" step="1" />
-        <label for="debug-time">เวลาจำลอง: <output id="debug-time-out" for="debug-time"></output></label>
-        <input id="debug-time" type="range" min="0" max="1439" step="1" />
-        <button type="button" id="debug-santa">เรียกซานต้า</button>
-      </section>
-
-      <!-- ปุ่มลอยจาง ๆ โผล่เฉพาะในโหมดเต็มตาเมื่อขยับเมาส์/แตะจอ -->
-      <div id="floating" class="buttons" role="group" aria-label="ตัวควบคุมโหมดเต็มจอ">
-        <button type="button" class="js-daylight"></button>
-        <button type="button" id="btn-exit"></button>
-      </div>
-    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

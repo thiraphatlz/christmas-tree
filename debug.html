@@ -6,10 +6,51 @@
     <meta name="robots" content="noindex" />
     <title>ต้นคริสต์มาส: debug</title>
     <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/src/debug.css" />
   </head>
   <body>
-    <!-- STUB: agent "ui-debug" เขียนของจริงแทน -->
-    <canvas id="scene"></canvas>
+    <div id="layout">
+      <div id="stage">
+        <canvas id="scene" role="img" aria-label="ต้นคริสต์มาส pixel art ที่โตขึ้นทุกวัน"></canvas>
+      </div>
+      <aside id="panel" aria-label="เครื่องมือทดสอบ">
+        <h1>เครื่องมือทดสอบ</h1>
+
+        <section aria-labelledby="h-date">
+          <h2 id="h-date">วันเวลาจำลอง</h2>
+          <label for="date">วันที่: <output id="date-out" for="date"></output></label>
+          <input id="date" type="range" min="0" max="36" step="1" />
+          <label for="time">เวลา: <output id="time-out" for="time"></output></label>
+          <input id="time" type="range" min="0" max="1439" step="1" />
+          <div class="row" id="jumps" role="group" aria-label="ข้ามไปวันที่"></div>
+        </section>
+
+        <section aria-labelledby="h-day">
+          <h2 id="h-day">กลางวัน/กลางคืน</h2>
+          <div class="row" id="daylight" role="group" aria-label="โหมดกลางวันกลางคืน">
+            <button type="button" data-mode="auto">อัตโนมัติ</button>
+            <button type="button" data-mode="day">กลางวัน</button>
+            <button type="button" data-mode="night">กลางคืน</button>
+          </div>
+        </section>
+
+        <section aria-labelledby="h-act">
+          <h2 id="h-act">การทำงาน</h2>
+          <div class="row">
+            <button type="button" id="santa">เรียกซานต้า</button>
+            <button type="button" id="fullscreen">เต็มจอ (เฉพาะฉาก)</button>
+            <button type="button" id="mute" aria-pressed="true"></button>
+          </div>
+        </section>
+
+        <section aria-labelledby="h-read">
+          <h2 id="h-read">สถานะ</h2>
+          <p id="info-title"></p>
+          <p id="info-count"></p>
+          <dl id="readout"></dl>
+        </section>
+      </aside>
+    </div>
     <script type="module" src="/src/debug.ts"></script>
   </body>
 </html>
