@@ -69,3 +69,28 @@ main agent (ไม่ว่าโมเดลไหน) ทำหน้าที
 - [ ] เลือกไฟล์เสียง (พื้นหลังวนซ้ำ และ "โฮ่ โฮ่ โฮ่") แล้วใส่ใน `AudioManager` พร้อมจด license ใน `CREDITS.md`
 - รู้อยู่แล้ว: สายไฟสีเขียวเข้มวาดทับลูกบอลบางลูก (ถ้าไม่ชอบ ให้แยกชั้นของตกแต่งไปวาดหลังไฟ)
 - รู้อยู่แล้ว: wrangler ไม่ได้อยู่ใน devDependencies (Workers Builds เรียกผ่าน `npx`) ถ้าอยากตรึงเวอร์ชันให้เพิ่มเอง
+
+## รอบที่ 2 (อัปเดตล่าสุด): ต้นใหญ่ขึ้น หน้าหลักไม่มี UI หน้า debug แยก ของตกแต่งเพิ่ม
+
+การตัดสินใจของเจ้าของ (แทนที่ของเดิมเมื่อขัดกัน):
+- **สไตล์**: คง pixel art แบบเดิม (ดู preview แบบนุ่ม/papercut/low-poly/pixel ละเอียดแล้วไม่เลือก) ฉากสูง logical 180 เท่าเดิม
+- **ขนาดต้น**: วันที่ 1 สูง 25% ของจอ วันที่ 25 สูง 80% (รวมดาวราว 85%) ค่าอยู่ใน `src/config.ts` จอแนวตั้งจำกัดด้วยความกว้าง
+- **หน้าหลัก**: มีแค่ `<canvas>` เต็มจอด้วย F / ดับเบิลคลิก / F11 ซ่อนเคอร์เซอร์หลัง 3 วินาที คลิกแรกปลดล็อกเสียง ปุ่ม M สลับ mute
+- **หน้า debug**: `debug.html` (deploy แล้วเข้าที่ `/debug` ได้เอง ตามค่า default `html_handling` ของ Cloudflare) ใช้ `createApp()` ตัวเดียวกับหน้าหลัก
+- **ของตกแต่ง**: แบ่ง 2 รอบ
+- **Agents**: subagent ทุกตัวใช้ `model: sonnet`
+- ตัดออก: parallax และ offscreen cache (ผูกกับลุคที่ไม่ใช่ pixel และฉาก pixel วาดเร็วพออยู่แล้ว)
+
+สัญญากลางที่เปลี่ยน: `src/app.ts` (`createApp`), `src/core/growthAnim.ts`, `treeHeight(day, max)` / `getTreeShape(day, max)`, `tinselCount`, `hasSkirt`, `SceneParams.treeMax/scale/giftScale/growT`
+ลำดับ layer: sky, background, snow.far, santa, gifts.behind, tree, lights, decor, ground, gifts.front, fairylights, snow.near
+
+เสร็จแล้ว (commit แยกตามโมดูล, test 135/135 และ build ผ่าน):
+- [x] tree, scene (กระท่อม ต้นสน fairy lights แสงเหนือ หิมะระยิบ), festive-decor รอบ 1 (tinsel ลูกบอลหลายขนาด โบว์ ดาว ผ้ารองโคน), gifts-santa, ui-debug, tests
+- [x] ตรวจด้วยตา 1 ภาพ: วันที่ 25 กลางคืน จอกว้าง พร้อม `?santa=now` ภาพออกมาถูกต้อง
+
+ยังไม่ได้ทำ:
+- [ ] ตรวจด้วยตา: วันที่ 1, 10, 20 กลางวัน/กลางคืน, จอแนวตั้ง, หน้า debug, เต็มจอ, ซ่อนเคอร์เซอร์
+- [ ] ตรวจ DOM หน้าหลัก: ตอนเปิดผ่าน dev server พบ `<div>` เกินมา 1 ตัวใน body ยังไม่ได้ยืนยันว่ามาจาก extension ของเบราว์เซอร์หรือจากโค้ด (ไฟล์ `dist/index.html` มีแค่ canvas)
+- [ ] รีวิวคุณภาพภาพและปรับแก้
+- [ ] ของตกแต่งรอบ 2: ไม้เท้าลูกกวาด กระดิ่ง ดาวเล็ก เกล็ดหิมะ ถุงเท้า ขนม เทียน/โคม มนุษย์หิมะ โคมถนน พลุวันที่ 25
+- [ ] อัปเดต README (หน้า debug, ทดสอบผ่าน URL, ลบเรื่อง `?debug=1` และปุ่ม H)
