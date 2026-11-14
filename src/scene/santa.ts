@@ -35,16 +35,24 @@ const SLEIGH = [
   'yyyyyyyyyyyyyyy.',
 ];
 
-// กวางเรนเดียร์ทั่วไป (จมูกสีน้ำตาลเข้ม): 11 x 9, ขา 2 เฟรม
+// กวางเรนเดียร์ทั่วไป (จมูกสีน้ำตาลเข้ม) มีคอ: 11 x 11, ขา 2 เฟรม
 const DEER_BODY = [
   '........a.a',
   '.........a.',
   '........bb.',
-  'w.......bbn',
+  '........bbn',
+  '.......bb..',
+  'w.....bbb..',
   'bbbbbbbbbb.',
   'bbbbbbbbb..',
   '.dddddddd..',
 ];
+
+// ขอบสว่างบาง ๆ กลางคืน ให้สีน้ำตาลเข้มไม่กลืนฟ้า (ทุกตัวอักษรเป็นสีเดียว)
+const RIM_COLOR = '#d9c4a0';
+const RIM_LEGEND = Object.fromEntries(Object.keys(LEGEND).map((k) => [k, RIM_COLOR]));
+const RIM_OFFSETS: readonly (readonly [number, number])[] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const MIN_Y = 15; // ไฟประดับกินบน 12 px และขอบอีก 1 px
 const DEER_LEGS = [
   ['.bd....db..', 'b.d....d.b.'], // เหยียดขา
   ['..bd..db...', '...b..b....'], // หุบขา
@@ -54,7 +62,7 @@ const DEER = DEER_LEGS.map((legs) => [...DEER_BODY, ...legs]);
 const SLEIGH_W = 16;
 const DEER_W = 11;
 const DEER_X = [19, 32, 45]; // ตำแหน่งกวางแต่ละตัวในขบวน
-const DEER_Y = 2; // ให้หลังกวางตรงกับสายลากที่ y+6
+const DEER_Y = 0; // หลังกวาง (แถวที่ 6) ตรงกับสายลากที่ y+6
 const TEAM_W = 56;
 const TRAIL = 16; // ระยะประกายตามหลัง
 
@@ -90,12 +98,23 @@ export function createSanta(audio: IAudioManager): SantaLayer {
   function drawTeam(p: SceneParams, x: number, y: number, flip: boolean, gallop: number | null): void {
     const { ctx } = p;
     const at = (ox: number, w: number) => (flip ? x + TEAM_W - ox - w : x + ox);
+    const rim = p.daylight.darkness > 0.3;
+    const base = ctx.globalAlpha;
+    const sprite = (rows: readonly string[], sx: number, sy: number) => {
+      if (rim) {
+        ctx.globalAlpha = base * p.daylight.darkness * 0.8;
+        for (const [dx, dy] of RIM_OFFSETS) drawSprite(ctx, rows, RIM_LEGEND, sx + dx, sy + dy, flip);
+        ctx.globalAlpha = base;
+      }
+      drawSprite(ctx, rows, LEGEND, sx, sy, flip);
+    };
     rect(ctx, at(SLEIGH_W, 37), y + 6, 37, 1, PALETTE.goldDark); // สายลาก
-    drawSprite(ctx, SLEIGH, LEGEND, at(0, SLEIGH_W), y, flip);
+    sprite(SLEIGH, at(0, SLEIGH_W), y);
     DEER_X.forEach((ox, i) => {
       const f = gallop === null ? 0 : (gallop + i) % 2;
-      drawSprite(ctx, DEER[f], LEGEND, at(ox, DEER_W), y + DEER_Y - f, flip);
+      sprite(DEER[f], at(ox, DEER_W), y + DEER_Y - f);
     });
+    ctx.globalAlpha = base;
   }
 
   function drawFlight(p: SceneParams, f: Flight): void {
@@ -103,15 +122,17 @@ export function createSanta(audio: IAudioManager): SantaLayer {
     if (f.calm) {
       // โหมดนิ่ง: ค่อย ๆ ปรากฏ ค้าง แล้วจางหาย
       ctx.globalAlpha = Math.max(0, Math.min(1, f.t / CALM_FADE_MS, (CALM_MS - f.t) / CALM_FADE_MS));
-      drawTeam(p, p.centerX - TEAM_W / 2, Math.round(p.groundY * 0.14), f.dir < 0, null);
+      // ฟ้าโล่งทางซ้ายต้นไม้: กึ่งกลางที่ 22% ของความกว้าง และไม่หลุดจอ
+      const cx = Math.max(0, Math.min(p.width - TEAM_W, Math.round(p.width * 0.22 - TEAM_W / 2)));
+      drawTeam(p, cx, Math.max(MIN_Y, Math.round(p.groundY * 0.16)), f.dir < 0, null);
       ctx.globalAlpha = 1;
       return;
     }
     const u = f.t / FLIGHT_MS;
     const span = p.width + TEAM_W + TRAIL;
     const x = Math.round(f.dir > 0 ? -TEAM_W + u * span : p.width - u * span);
-    // โค้งขึ้นกลางจอ: ขอบบนขบวนอยู่ราว 28% ถึง 14% ของฟ้า
-    const y = Math.round(p.groundY * (0.28 - 0.14 * Math.sin(Math.PI * u)));
+    // โค้งขึ้นกลางจอ: ขอบบนขบวนราว 24% ถึง 10% ของ groundY (ไม่สูงกว่า MIN_Y)
+    const y = Math.max(MIN_Y, Math.round(p.groundY * (0.24 - 0.14 * Math.sin(Math.PI * u))));
     drawTeam(p, x, y, f.dir < 0, Math.floor(f.t / GALLOP_MS));
 
     // ประกายตามหลังเลื่อน
