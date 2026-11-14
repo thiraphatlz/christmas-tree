@@ -157,7 +157,7 @@ export function createBackground(): SceneLayer {
         lampX = -1;
         if (width >= 200) {
           const fs = zoneR + 2;
-          const lampPos = width - 3 - lw;
+          const lampPos = width - 9 - lw; // เว้นขอบขวาให้ฮาโลไม่ถูกตัด
           let lampOn = lampPos >= fs;
           let sHi = lampPos - 4 - sw;
           let snowOn = lampOn && sHi >= fs;
