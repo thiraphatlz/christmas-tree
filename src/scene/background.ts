@@ -1,4 +1,4 @@
-import { mixColor } from '../core/draw';
+import { mixColor, pixel, rect } from '../core/draw';
 import { hashRand, randInt } from '../core/rng';
 import { PALETTE } from '../palette';
 import type { SceneLayer } from '../types';
@@ -6,6 +6,108 @@ import type { SceneLayer } from '../types';
 interface Pine {
   x: number; // กึ่งกลาง
   h: number;
+}
+
+interface Cols {
+  snow: string; shade: string; hat: string; scarf: string; scarfD: string; carrot: string;
+  twig: string; iron: string; pane: string;
+}
+const COAL = '#1a1a22';
+
+// ลูกหิมะวงรี: ครึ่งความกว้างต่อแถวจาก sqrt, ขอบขวาไล่เงา
+function ball(ctx: CanvasRenderingContext2D, c: Cols, cx: number, top: number, h: number, wd: number): void {
+  for (let i = 0; i < h; i++) {
+    const t = (2 * i + 1) / h - 1;
+    const hw = Math.max(1, Math.round(((wd - 1) / 2) * Math.sqrt(1 - 0.75 * t * t)));
+    rect(ctx, cx - hw, top + i, 2 * hw + 1, 1, c.snow);
+    if (hw >= 2) {
+      const sh = hw >= 3 ? 2 : 1;
+      rect(ctx, cx + hw - sh + 1, top + i, sh, 1, c.shade);
+    }
+  }
+}
+
+function drawSnowman(ctx: CanvasRenderingContext2D, c: Cols, sx: number, y0: number, sw: number, sh: number): void {
+  const odd = (v: number) => (v % 2 ? v : v + 1);
+  const hB = Math.round(sh * 0.38);
+  const hM = Math.round(sh * 0.3);
+  const hH = Math.round(sh * 0.28);
+  const hatH = sh - hB - hM - hH + 3;
+  const bw = sw % 2 ? sw : sw - 1;
+  const mw = Math.min(bw, odd(Math.round(bw * 0.72)));
+  const hw = Math.min(mw, odd(Math.round(bw * 0.52)));
+  const cx = sx + (sw >> 1);
+  const bTop = y0 - hB;
+  const mTop = bTop - hM + 1;
+  const hTop = mTop - hH + 1;
+  ball(ctx, c, cx, bTop, hB, bw);
+  ball(ctx, c, cx, mTop, hM, mw);
+  ball(ctx, c, cx, hTop, hH, hw);
+  const big = sh >= 18;
+  // แขนกิ่งไม้ (วาดก่อนผ้าพันคอ)
+  const mh = mw >> 1;
+  const ay = mTop + (big ? 3 : 2);
+  rect(ctx, cx - mh - 2, ay, 3, 1, c.twig);
+  pixel(ctx, cx - mh - 2, ay - 1, c.twig);
+  rect(ctx, cx + mh, ay, 3, 1, c.twig);
+  pixel(ctx, cx + mh + 2, ay - 1, c.twig);
+  // ผ้าพันคอ + ชายห้อย
+  rect(ctx, cx - mh, mTop, mw, 2, c.scarf);
+  for (let dx = -mh; dx <= mh; dx += 2) pixel(ctx, cx + dx, mTop + 1, c.scarfD);
+  const tl = big ? 3 : 2;
+  rect(ctx, cx + 1, mTop + 2, 2, tl, c.scarf);
+  rect(ctx, cx + 1, mTop + 1 + tl, 2, 1, c.scarfD);
+  // หมวกดำเรียบ
+  rect(ctx, cx - (hw >> 1) - 1, hTop, hw + 2, 1, c.hat);
+  rect(ctx, cx - ((hw - 2) >> 1), hTop - (hatH - 1), hw - 2, hatH - 1, c.hat);
+  // หน้า: ตาถ่าน จมูกแครอท
+  const ey = hTop + (hH >= 6 ? 2 : 1);
+  const ex = hw >= 7 ? 2 : 1;
+  pixel(ctx, cx - ex, ey, COAL);
+  pixel(ctx, cx + ex, ey, COAL);
+  pixel(ctx, cx, ey + 1, c.carrot);
+  if (hH >= 6) {
+    pixel(ctx, cx + 1, ey + 1, c.carrot);
+    pixel(ctx, cx - 2, ey + 2, COAL);
+    pixel(ctx, cx, ey + 2, COAL);
+    pixel(ctx, cx + 2, ey + 2, COAL);
+  }
+  // กระดุมถ่าน
+  pixel(ctx, cx, bTop + 2, COAL);
+  if (hB >= 8) pixel(ctx, cx, bTop + 4, COAL);
+}
+
+function drawLamp(ctx: CanvasRenderingContext2D, c: Cols, x0: number, y0: number, lw: number, lh: number, glow: number): void {
+  const cx = x0 + (lw >> 1);
+  const T = y0 - lh;
+  const paneH = Math.max(4, Math.round(lh / 6));
+  const px = x0 + 1;
+  const py = T + 3;
+  const pw = lw - 2;
+  if (glow > 0.02) {
+    ctx.fillStyle = PALETTE.windowGlow;
+    ctx.globalAlpha = Math.min(1, 0.1 * glow);
+    ctx.fillRect(px - 4, py - 4, pw + 8, paneH + 8);
+    ctx.globalAlpha = Math.min(1, 0.16 * glow);
+    ctx.fillRect(px - 3, py - 3, pw + 6, paneH + 6);
+    ctx.globalAlpha = Math.min(1, 0.24 * glow);
+    ctx.fillRect(px - 1, py - 1, pw + 2, paneH + 2);
+    ctx.globalAlpha = 1;
+  }
+  const postTop = T + paneH + 5;
+  rect(ctx, cx, postTop, 1, y0 - 2 - postTop, c.iron);
+  rect(ctx, cx - 1, y0 - 9, 3, 1, c.iron); // ปลอกเสา
+  rect(ctx, x0, y0 - 1, lw, 1, c.iron); // ฐาน
+  rect(ctx, cx - 1, y0 - 2, 3, 1, c.iron);
+  rect(ctx, cx - 1, T + paneH + 4, 3, 1, c.iron); // ก้นโคม
+  rect(ctx, x0, T + 3 + paneH, lw, 1, c.iron);
+  rect(ctx, x0, T + 3, 1, paneH, c.iron); // กรอบโคม
+  rect(ctx, x0 + lw - 1, T + 3, 1, paneH, c.iron);
+  rect(ctx, px, py, pw, paneH, c.pane);
+  rect(ctx, x0, T + 2, lw, 1, c.iron);
+  rect(ctx, x0, T + 1, lw, 1, c.iron); // หลังคา + หมวกหิมะ
+  rect(ctx, cx - 1, T + 1, 3, 1, c.snow);
+  rect(ctx, cx - 1, T, 3, 1, c.snow);
 }
 
 /** ของฉากหลังบนพื้นหิมะ: กระท่อมหน้าต่างสว่าง ต้นสนเล็ก (วาดหลังท้องฟ้า ก่อนหิมะและต้นไม้) */
@@ -23,6 +125,9 @@ export function createBackground(): SceneLayer {
   let cPineDark = '';
   let cSmoke = '';
   let cTrunk = '';
+  let snowX = -1; // -1 = ไม่วาดมนุษย์หิมะ
+  let lampX = -1; // -1 = ไม่วาดโคมไฟ
+  const col: Cols = { snow: '', shade: '', hat: '', scarf: '', scarfD: '', carrot: '', twig: '', iron: '', pane: '' };
 
   return {
     render(p) {
@@ -34,12 +139,36 @@ export function createBackground(): SceneLayer {
       const zoneL = Math.round(centerX - (0.42 * treeMax + 6));
       const zoneR = Math.round(centerX + (0.42 * treeMax + 6));
 
-      const k = `${seed}|${width}|${centerX}|${treeMax}|${W}`;
+      // มนุษย์หิมะ/โคมไฟ: ขนาดตาม scale (เล็กลงเมื่อ scale < 1.25)
+      const bigSnow = u >= 0.83;
+      const sw = bigSnow ? Math.max(12, Math.round(14 * u)) : 9;
+      const sh = bigSnow ? Math.max(17, Math.round(20 * u)) : 13;
+      const lw = 5;
+      const lh = Math.max(22, Math.round(30 * u));
+
+      const k = `${seed}|${width}|${centerX}|${treeMax}|${W}|${sw}|${lh}`;
       if (k !== key) {
         key = k;
         // กระท่อม: ต้องอยู่ซ้ายเขตต้นไม้ทั้งหลัง ไม่งั้นข้าม
         const cx = Math.max(2, Math.round(zoneL * 0.5 - W / 2));
         cabinX = cx + W + 2 <= zoneL ? cx : -1;
+        // มนุษย์หิมะ + โคมไฟ: ขวาเขตต้นไม้ โคมอยู่ริมขวาสุด จอแคบวาดเฉพาะที่พอดี
+        snowX = -1;
+        lampX = -1;
+        if (width >= 200) {
+          const fs = zoneR + 2;
+          const lampPos = width - 3 - lw;
+          let lampOn = lampPos >= fs;
+          let sHi = lampPos - 4 - sw;
+          let snowOn = lampOn && sHi >= fs;
+          if (!snowOn) {
+            sHi = width - 3 - sw;
+            snowOn = sHi >= fs;
+            if (snowOn) lampOn = false;
+          }
+          if (snowOn) snowX = fs + Math.floor(hashRand(seed, 90, 1) * (sHi - fs + 1));
+          if (lampOn) lampX = lampPos;
+        }
         // ต้นสน: จอแคบไม่วาด
         pines = [];
         if (width >= 200) {
@@ -55,6 +184,9 @@ export function createBackground(): SceneLayer {
               const x = lo + Math.floor(hashRand(seed, i, 52 + t) * (hi - lo + 1));
               // ไม่ทับกระท่อม และไม่ทับต้นสนที่วางไปแล้ว
               if (cabinX >= 0 && left && x + half >= cabinX - 1 && x - half <= cabinX + W + 1) continue;
+              // ไม่ทับมนุษย์หิมะ/โคมไฟ (ฝั่งขวา)
+              if (!left && snowX >= 0 && x + half >= snowX - 2 && x - half <= snowX + sw + 1) continue;
+              if (!left && lampX >= 0 && x + half >= lampX - 3 && x - half <= lampX + lw + 2) continue;
               if (pines.some((q) => Math.abs(q.x - x) < half + 4)) continue;
               pines.push({ x, h });
               break;
@@ -74,6 +206,15 @@ export function createBackground(): SceneLayer {
         cPineDark = mixColor(PALETTE.pineDark, n, dark * 0.5);
         cSmoke = mixColor(PALETTE.smoke, PALETTE.snowNight, dark * 0.7);
         cTrunk = mixColor(PALETTE.trunkDark, n, dark * 0.5);
+        col.snow = cSnow;
+        col.shade = mixColor(PALETTE.snowShade, PALETTE.snowNight, dark * 0.85);
+        col.hat = mixColor('#2b2b36', n, dark * 0.4);
+        col.scarf = mixColor(PALETTE.red, n, dark * 0.4);
+        col.scarfD = mixColor(PALETTE.redDark, n, dark * 0.4);
+        col.carrot = mixColor('#e07a3f', n, dark * 0.4);
+        col.twig = cTrunk;
+        col.iron = mixColor('#2e2a33', n, dark * 0.35);
+        col.pane = mixColor(PALETTE.windowDay, PALETTE.windowGlow, dark);
       }
 
       // --- ต้นสน ---
@@ -102,6 +243,13 @@ export function createBackground(): SceneLayer {
         }
         ctx.fillStyle = cTrunk;
         ctx.fillRect(q.x, groundY - trunk, 1, trunk + 1);
+      }
+
+      // --- มนุษย์หิมะ + โคมไฟ ---
+      if (snowX >= 0) drawSnowman(ctx, col, snowX, groundY + 1, sw, sh);
+      if (lampX >= 0) {
+        const fl = p.reducedMotion ? 0 : Math.sin(p.timeMs / 230) * 0.05 + Math.sin(p.timeMs / 97) * 0.03;
+        drawLamp(ctx, col, lampX, groundY + 1, lw, lh, dark * (1 + fl));
       }
 
       // --- กระท่อม ---
