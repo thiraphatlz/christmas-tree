@@ -1,0 +1,14 @@
+/* agent "ui" ดูแลไฟล์นี้ ส่วนของ canvas ด้านล่างห้ามลบ */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1030;
+}
+
+#scene {
+  position: fixed;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
