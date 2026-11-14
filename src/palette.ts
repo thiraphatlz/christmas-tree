@@ -35,11 +35,24 @@ export const PALETTE = {
   // ท้องฟ้า (บน, ล่าง) ของแต่ละช่วง
   skyNight: ['#0b1030', '#1b2452'],
   skyDawn: ['#3b3f7a', '#f2a67a'],
-  skyDay: ['#6fb7e8', '#cfe9f7'],
+  skyDay: ['#84c0ec', '#fde2c8'],
   skyDusk: ['#2c2a5e', '#e8784f'],
   moon: '#f6f1d5',
   sun: '#ffe9a8',
   skyStar: '#e8ecff',
+
+  // ฉากหลังและของตกแต่ง
+  aurora: ['#35d6a6', '#4c8cf0'],
+  cabinWall: '#8a5b3c',
+  cabinWallDark: '#5e3b27',
+  cabinRoof: '#4a2f22',
+  windowGlow: '#ffd879',
+  windowDay: '#f4dc9a',
+  smoke: '#c9d2e6',
+  pine: '#2f6b55',
+  pineDark: '#1d4a3f',
+  tinsel: ['#fff2b0', '#f2c14e', '#b9862b'],
+  candyRed: '#d8362f',
 
   // ซานต้า
   santaRed: '#c8322b',
