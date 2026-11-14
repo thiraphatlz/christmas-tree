@@ -5,30 +5,40 @@ import type { DetailRenderer, DetailViews, SceneLayer } from '../types';
 /** ความยาว animation ตอนชิ้นใหม่ของชั้นปรากฏ (ms) */
 export const DETAIL_APPEAR_MS = 1600;
 
+interface Track {
+  prev: number; // จำนวนชิ้นของเฟรมก่อน
+  from: number; // จำนวนชิ้นก่อนการเพิ่มครั้งล่าสุด
+  start: number | null; // เวลาเริ่ม animation (null = ไม่เล่น)
+}
+
 export function createDetailLayers(renderers: readonly DetailRenderer[]): SceneLayer {
-  const prev = new Map<string, number>(); // จำนวนชิ้นของเฟรมก่อน
-  const from = new Map<string, number>(); // จำนวนชิ้นก่อนการเพิ่มครั้งล่าสุด
-  const start = new Map<string, number>(); // เวลาเริ่ม animation
+  const tracks = new Map<string, Track>();
   let first = true;
 
   return {
     render(p) {
       const views: DetailViews = {};
-      for (const s of getLayerStates(p.day)) {
-        const before = prev.get(s.id);
-        if (!first && before !== undefined && s.count > before) {
-          from.set(s.id, before);
-          start.set(s.id, p.timeMs);
-        } else if (before !== undefined && s.count < before) {
-          start.delete(s.id); // ย้อนวัน: ยกเลิก
+      const states = getLayerStates(p.day);
+      for (const s of states) {
+        let tr = tracks.get(s.id);
+        if (!tr) {
+          // ชั้นใหม่ (เฟรมแรกหรือเพิ่มเข้าตารางทีหลัง): ไม่เล่น animation
+          tr = { prev: s.count, from: s.count, start: null };
+          tracks.set(s.id, tr);
+        } else if (!first && s.count > tr.prev) {
+          tr.from = tr.prev; // เพิ่มซ้อนระหว่างเล่น: เริ่มใหม่จากจำนวนที่แสดงอยู่ตอนนี้
+          tr.start = p.timeMs;
+        } else if (s.count < tr.prev) {
+          tr.start = null; // ย้อนวัน: ยกเลิก
         }
-        prev.set(s.id, s.count);
-        const t0 = start.get(s.id);
-        const t = t0 === undefined ? 1 : (p.timeMs - t0) / DETAIL_APPEAR_MS;
-        const playing = t >= 0 && t < 1;
-        views[s.id] = { ...s, prevCount: playing ? (from.get(s.id) ?? s.count) : s.count, appearT: playing ? t : null };
+        tr.prev = s.count;
+        const t = tr.start === null ? 1 : (p.timeMs - tr.start) / DETAIL_APPEAR_MS;
+        const playing = !p.reducedMotion && t >= 0 && t < 1;
+        if (!playing && t >= 1) tr.start = null;
+        views[s.id] = { ...s, prevCount: playing ? tr.from : s.count, appearT: playing ? t : null };
       }
       first = false;
+      if (tracks.size > states.length) for (const id of tracks.keys()) if (!(id in views)) tracks.delete(id); // ชั้นที่ถูกถอดออก
       for (const r of renderers) r.render(p, views);
     },
   };
