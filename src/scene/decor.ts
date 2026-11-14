@@ -1,5 +1,5 @@
 import { GROW_DAYS, TREE_REF_HEIGHT } from '../config';
-import { getTreeShape, halfWidthAt, ornamentCount, ribbonCount, tinselCount } from '../core/growth';
+import { getTreeShape, halfWidthAt, ornamentCount, ribbonCount, tinselCount, trinketCount } from '../core/growth';
 import { drawSprite, mixColor, pixel, rect } from '../core/draw';
 import { hashRand } from '../core/rng';
 import { PALETTE } from '../palette';
@@ -36,6 +36,20 @@ const BOW_COLORS: [string, string, string][] = [
 const BOW7 = ['.cc.cc.', 'ccdkdcc', '.cckcc.', '..d.d..', '.d...d.'];
 const BOW5 = ['cc.cc', 'cckcc', '.d.d.'];
 
+// ของจุกจิก 4 แบบ: [ใหญ่, เล็ก] (ทุกแถวยาวเท่ากัน) r แดง w ขาว g ทอง d ทองเข้ม k กระดิ่ง s ดาว i น้ำแข็ง
+const TRINKETS: [string[], string[]][] = [
+  [['.rw.', 'w..r', 'r...', 'w...', 'r...', 'w...', 'r...', 'w...'], ['.rw', 'w..', 'r..', 'w..', 'r..', 'w..']],
+  [['..g..', '.ggg.', 'ggggg', 'ddddd', '..k..'], ['.g.', 'ggg', 'ddd', '.k.']],
+  [['..s..', '.sss.', 'sswss', '.sss.', '.s.s.'], ['.s.', 'sws', '.s.']],
+  [['i.w.i', '.iwi.', 'wwwww', '.iwi.', 'i.w.i'], ['iwi', 'www', 'iwi']],
+];
+const TRINKET_COLORS: Record<string, string>[] = [
+  { r: PALETTE.red, w: PALETTE.white },
+  { g: PALETTE.gold, d: PALETTE.goldDark, k: '#7a5518' },
+  { s: '#ffeaa0', w: PALETTE.white },
+  { i: '#9fd4ff', w: PALETTE.white },
+];
+
 /** ความสูงของ garland ลำดับที่ i (สัดส่วนในใบ) คงที่ เพิ่มวันแล้วเพิ่มเส้นเท่านั้น */
 const GARLAND_V = [0.5, 0.26, 0.72, 0.38, 0.6, 0.15];
 
@@ -64,9 +78,17 @@ interface Bow extends Slot {
   col: [string, string, string];
   cur: Record<string, string>;
 }
+interface Trinket extends Slot {
+  rows: readonly string[];
+  type: number;
+  phase: number;
+}
 interface Layout {
   baubles: Bauble[];
   bows: Bow[];
+  trinkets: Trinket[];
+  // legend ที่หรี่ตามกลางคืนแล้ว ต่อชนิด
+  legends: Record<string, string>[];
 }
 
 /** แถวที่ y กับความสูง rows: ความกว้างสูงสุดที่ใช้ได้ (ครึ่งหนึ่งข้างเดียว) */
@@ -158,7 +180,15 @@ function buildLayout(seed: number, max: number): Layout {
     const slot = pick(i, 1000, rows.length, Math.floor(rows[0].length / 2));
     bows.push({ ...slot, w: rows[0].length, rows, col, cur: {} });
   }
-  return { baubles, bows };
+  // ของจุกจิก: slot ต่อจากโบว์ (channel 2000+ ไม่ชนของเดิม)
+  const trinkets: Trinket[] = [];
+  for (let i = 0; i < trinketCount(GROW_DAYS); i++) {
+    const type = i % 4;
+    const r = TRINKETS[type][sc >= 1.25 ? 0 : 1];
+    const slot = pick(i, 2000, r.length, Math.floor(r[0].length / 2));
+    trinkets.push({ ...slot, rows: r, type, phase: hashRand(seed, i, 2200) });
+  }
+  return { baubles, bows, trinkets, legends: TRINKET_COLORS.map((l) => ({ ...l })) };
 }
 
 export function createDecor(): SceneLayer {
@@ -173,7 +203,7 @@ export function createDecor(): SceneLayer {
         cache = { seed: p.seed, max: p.treeMax, layout: buildLayout(p.seed, p.treeMax) };
         dimStep = -1;
       }
-      const { baubles, bows } = cache.layout;
+      const { baubles, bows, trinkets, legends } = cache.layout;
       const nB = Math.min(baubles.length, ornamentCount(p.day));
       const nR = Math.min(bows.length, ribbonCount(p.day));
       const ox = p.centerX;
@@ -195,6 +225,9 @@ export function createDecor(): SceneLayer {
           b.bd = dim(b.bandDark);
           b.hi = dim(mixColor(b.base, '#ffffff', 0.8));
         }
+        legends.forEach((lg, n) => {
+          for (const key in lg) lg[key] = dim(TRINKET_COLORS[n][key]);
+        });
         for (const b of bows) b.cur = { c: dim(b.col[0]), d: dim(b.col[1]), k: dim(b.col[2]) };
       }
 
@@ -219,6 +252,20 @@ export function createDecor(): SceneLayer {
             if (x % 2 === 0 && Math.abs(x) <= halfWidthAt(tree, y + 1) - 1) pixel(ctx, ox + x, oy + y + 1, tc[2]);
           }
         }
+      }
+
+      // ---- trinkets ----
+      const nK = Math.min(trinkets.length, trinketCount(p.day));
+      for (let i = 0; i < nK; i++) {
+        const k = trinkets[i];
+        const h = k.rows.length;
+        const w = k.rows[0].length;
+        const top = yOf(tree, k.v) - Math.floor(h / 2);
+        const half = Math.floor(w / 2);
+        let x = Math.round(k.s * span(tree, top, h, half + 1));
+        // กระดิ่งแกว่ง 1 px ช้า ๆ
+        if (!still && k.type === 1) x += Math.sin(t / (1400 + k.phase * 800) + k.phase * 6.283) > 0.5 ? 1 : 0;
+        drawSprite(ctx, k.rows, legends[k.type], ox + x - half, oy + top);
       }
 
       // ---- baubles ----
