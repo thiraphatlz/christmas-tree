@@ -1,0 +1,9 @@
+{
+  // เว็บ static ล้วน: มีแค่ assets ไม่มี Worker script (ห้ามเพิ่ม "main", "run_worker_first" หรือ bindings)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "christmas-tree",
+  "compatibility_date": "2026-11-14",
+  "assets": {
+    "directory": "./dist"
+  }
+}
