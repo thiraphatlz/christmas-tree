@@ -22,6 +22,19 @@ export function tinselCount(day: number): number {
   return Math.max(0, Math.floor((clampDay(day) - 5) / 3));
 }
 
+/**
+ * ของตกแต่งชิ้นเล็กบนต้น (ไม้เท้าลูกกวาด กระดิ่ง ดาวเล็ก เกล็ดหิมะ วนตาม index):
+ * เริ่มวันที่ 7 เพิ่มวันละชิ้น (วันที่ 25 = 19)
+ */
+export function trinketCount(day: number): number {
+  return Math.max(0, clampDay(day) - 6);
+}
+
+/** ของวางรอบโคนต้น (ถุงเท้า ขนม ไม้เท้าลูกกวาด โคม/เทียน): เริ่มวันที่ 13 เพิ่มทุก 2 วัน (วันที่ 25 = 7) */
+export function groundItemCount(day: number): number {
+  return Math.max(0, Math.floor((clampDay(day) - 11) / 2));
+}
+
 /** ผ้ารองโคนต้นมาวันที่ 4 */
 export function hasSkirt(day: number): boolean {
   return clampDay(day) >= 4;

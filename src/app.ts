@@ -13,6 +13,7 @@ import { getDaylight } from './core/daylight';
 import { getTreeShape } from './core/growth';
 import { createGrowthAnim } from './core/growthAnim';
 import { createBackground } from './scene/background';
+import { createCelebration } from './scene/celebration';
 import { createDecor } from './scene/decor';
 import { createFairyLights } from './scene/fairylights';
 import { createGifts } from './scene/gifts';
@@ -79,7 +80,8 @@ export function createApp(canvas: HTMLCanvasElement): AppController {
   const decor = createDecor();
   const ground = createGroundDecor();
   const fairy = createFairyLights();
-  const layers = [sky, background, snow.far, santa, gifts.behind, tree, lights, decor, ground, gifts.front, fairy, snow.near];
+  const celebration = createCelebration();
+  const layers = [sky, background, snow.far, celebration, santa, gifts.behind, tree, lights, decor, ground, gifts.front, fairy, snow.near];
   const growth = createGrowthAnim();
 
   // ---------- state ----------

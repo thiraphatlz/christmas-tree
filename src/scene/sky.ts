@@ -137,7 +137,8 @@ export function createSky(): SceneLayer {
       }
 
       // --- พระจันทร์ / พระอาทิตย์ (อยู่ชิดขอบบน เว้นทางให้เลื่อนซานต้า) ---
-      const bodyY = Math.max(3, Math.round(groundY * 0.05));
+      // อยู่ใต้ fairy lights (12px บนสุด) จะได้ไม่ถูกสายไฟพาดทับ
+      const bodyY = Math.max(15, Math.round(groundY * 0.1));
       if (dark > 0.02) {
         ctx.globalAlpha = dark;
         drawSprite(ctx, MOON, MOON_LEGEND, Math.round(width * 0.68) - 4, bodyY);
