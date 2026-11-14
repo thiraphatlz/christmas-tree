@@ -113,6 +113,46 @@ export interface SantaLayer extends SceneLayer {
   trigger(): void;
 }
 
+// ---------- ชั้นรายละเอียด (Detail Layers) ที่ปลดล็อกตามวัน ----------
+/** นิยามของชั้นหนึ่งชั้นใน src/detail/layers.ts */
+export interface DetailLayerDef {
+  id: string;
+  /** ชื่อภาษาไทยสำหรับหน้า debug */
+  label: string;
+  /** วันที่ชิ้นที่ 1, 2, 3, ... ของชั้นนี้ปรากฏ (เรียงจากน้อยไปมาก) วันแรก = วันปลดล็อก จำนวนสูงสุด = ความยาว */
+  steps: readonly number[];
+  /** วันที่ความเข้ม (แสง ความหนาแน่น) ถึง 1 */
+  fullDay: number;
+}
+
+/** สถานะของชั้นในวันหนึ่ง คำนวณแบบ pure จาก day */
+export interface DetailLayerState {
+  id: string;
+  label: string;
+  unlockDay: number;
+  active: boolean;
+  /** จำนวนชิ้นที่ปรากฏแล้ว (ชิ้น index 0..count-1) */
+  count: number;
+  maxCount: number;
+  /** 0 = ยังไม่ปลดล็อก แล้วไล่ขึ้นถึง 1 ในวัน fullDay */
+  intensity: number;
+}
+
+/** สถานะที่ตัววาดได้รับ: เพิ่มข้อมูล animation ตอนชิ้นใหม่ปรากฏ */
+export interface DetailLayerView extends DetailLayerState {
+  /** จำนวนชิ้นก่อนการเพิ่มครั้งล่าสุด (ชิ้น index >= prevCount คือชิ้นที่กำลังปรากฏ) */
+  prevCount: number;
+  /** 0..1 ระหว่าง animation ปรากฏของชิ้นใหม่, null = ไม่ได้เล่น */
+  appearT: number | null;
+}
+
+export type DetailViews = Record<string, DetailLayerView>;
+
+/** ตัววาดของกลุ่มชั้นรายละเอียด (เช่น ตลาดคริสต์มาส) รับสถานะของทุกชั้นแล้ววาดเฉพาะที่ตัวเองดูแล */
+export interface DetailRenderer {
+  render(p: SceneParams, views: DetailViews): void;
+}
+
 // ---------- เสียง ----------
 export type SoundId = 'santaHoHoHo';
 

@@ -15,6 +15,8 @@ import { createGrowthAnim } from './core/growthAnim';
 import { createBackground } from './scene/background';
 import { createCelebration } from './scene/celebration';
 import { createDecor } from './scene/decor';
+import { createDetailLayers } from './scene/detail';
+import { createMarket } from './scene/market';
 import { createFairyLights } from './scene/fairylights';
 import { createGifts } from './scene/gifts';
 import { createGroundDecor } from './scene/ground';
@@ -81,7 +83,9 @@ export function createApp(canvas: HTMLCanvasElement): AppController {
   const ground = createGroundDecor();
   const fairy = createFairyLights();
   const celebration = createCelebration();
-  const layers = [sky, background, snow.far, celebration, santa, gifts.behind, tree, lights, decor, ground, gifts.front, fairy, snow.near];
+  // ชั้นรายละเอียดที่ปลดล็อกตามวัน (ตลาดคริสต์มาส) วาดหลังของเดิมทั้งหมด; ?layers=off ปิดไว้เทียบกับฉากเดิม
+  const detail = query.get('layers') === 'off' ? { render() {} } : createDetailLayers([createMarket()]);
+  const layers = [sky, detail, background, snow.far, celebration, santa, gifts.behind, tree, lights, decor, ground, gifts.front, fairy, snow.near];
   const growth = createGrowthAnim();
 
   // ---------- state ----------
