@@ -1,172 +1,97 @@
-// ต้นคริสต์มาส: ลำต้น ชั้นใบ ของตกแต่ง ดาว และเอฟเฟกต์ตอนโตขึ้น (วาดด้วยโค้ดล้วน)
-import { GROW_DAYS } from '../config';
-import { drawSprite, mixColor, pixel, rect } from '../core/draw';
-import { getTreeShape, halfWidthAt, ornamentCount, ribbonCount } from '../core/growth';
+// ต้นคริสต์มาส: ลำต้น ชั้นใบ หิมะ เงาที่พื้น และประกายตอนโต (ของตกแต่งอยู่ใน decor.ts)
+import { mixColor, pixel, rect } from '../core/draw';
+import { halfWidthAt } from '../core/growth';
 import { hashRand } from '../core/rng';
 import { PALETTE } from '../palette';
-import type { SceneLayer, SceneParams, TreeShape } from '../types';
+import type { SceneLayer, SceneParams } from '../types';
 
 const NAVY = PALETTE.skyNight[0];
-/** ความยาวเอฟเฟกต์ตอนต้นโต (ms) */
-const POP_MS = 1300;
-const SPARKLES = 9;
-/** ระยะห่างจากขอบใบของลูกบอล/โบว์ (px) */
-const ORN_MARGIN = 3;
-const BOW_MARGIN = 4;
+const SPARKLES = 12;
 
-// channel ของ hashRand (แยกกันเพื่อไม่ให้ค่าสุ่มซ้ำ)
-const CH = { jagL: 10, jagR: 11, speck: 12, teeth: 13, snow: 20, orn: 30, ornColor: 32, bow: 40, bowColor: 42, spark: 50 };
+// channel ของ hashRand
+const CH = { jagL: 10, jagR: 11, snow: 20, snowLen: 22, spark: 50 };
 
-const MOUND = ['...he...', '..sees..', '.ssssss.', 'ssdsssds'];
-const BAUBLE = ['hcc', 'ccc', 'ccd'];
-const BOW = ['cc.cc', 'cckcc', '.d.d.'];
-const STAR = ['...g...', '...s...', 'sssssss', '.sssss.', '..sss..', '.ss.ss.', '.s...s.'];
-
-// [สีหลัก, สีเงา] ของลูกบอล และ [สีโบว์, สีหาง, สีปม]
-const BAUBLE_COLORS = [
-  [PALETTE.red, PALETTE.redDark],
-  [PALETTE.gold, PALETTE.goldDark],
-  [PALETTE.white, PALETTE.snowShade],
-  [PALETTE.lights[2], PALETTE.giftColors[1]],
-] as const;
-const BOW_COLORS = [
-  [PALETTE.red, PALETTE.redDark, PALETTE.gold],
-  [PALETTE.gold, PALETTE.goldDark, PALETTE.red],
-  [PALETTE.white, PALETTE.snowShade, PALETTE.red],
-] as const;
-
-/** ย่อ/ยืด shape (ใช้ตอนเล่นเอฟเฟกต์โต) ทุกอย่างที่วาดจาก shape จะขยับตามเอง */
-function scaleShape(s: TreeShape, sx: number, sy: number): TreeShape {
-  const height = Math.max(1, Math.round(s.height * sy));
-  const trunkHeight = Math.min(height, Math.max(1, Math.round(s.trunkHeight * sy)));
-  const last = s.tiers.length - 1;
-  return {
-    ...s,
-    height,
-    trunkHeight,
-    trunkHalf: Math.max(1, Math.round(s.trunkHalf * sx)),
-    baseHalfWidth: s.baseHalfWidth * sx,
-    tiers: s.tiers.map((t, i) => ({
-      topY: i === last ? -height : Math.round(t.topY * sy),
-      bottomY: i === 0 ? -trunkHeight : Math.round(t.bottomY * sy),
-      topHalf: t.topHalf * sx,
-      bottomHalf: t.bottomHalf * sx,
-    })),
-  };
+/** สุ่มคงที่แบบเบาต่อ pixel (ไม่มี state) ใช้แทน hashRand ในลูป pixel */
+function nz(seed: number, a: number, b: number, c: number): number {
+  let h = (Math.imul(a, 374761393) ^ Math.imul(b, 668265263) ^ Math.imul(c, 2246822519) ^ seed) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-type Slot = readonly [h: number, v: number];
-
-/** แมปตำแหน่งสัดส่วน (h = ความสูงในพุ่มใบ 0..1, v = ซ้ายขวา -1..1) ลง shape ปัจจุบัน */
-function toPx(s: TreeShape, [h, v]: Slot, margin: number): [number, number] | null {
-  const y = -Math.round(s.trunkHeight + 1 + h * (s.height - s.trunkHeight));
-  const hw = halfWidthAt(s, y) - margin;
-  // ไม่มีใบที่แถวนี้ = วางไม่ได้, ใบแคบกว่า margin = วางชิดแกนลำต้น
-  return hw + margin <= 0 ? null : [Math.round(v * Math.max(0, hw)), y];
-}
-
-/**
- * ตำแหน่งสัดส่วนตายตัวของของตกแต่งทุกชิ้น (คำนวณครั้งเดียว)
- * ชิ้นที่ i เลือกจากตัวเลือก hashRand หลายค่า เอาค่าที่ห่างจากชิ้นก่อนหน้ามากสุดบนต้นโตเต็มที่ (ไม่กระจุก)
- * ขึ้นกับชิ้นก่อนหน้าเท่านั้น จึงไม่สลับที่เมื่อ day เพิ่ม
- */
-function layout(seed: number): { orn: Slot[]; bow: Slot[] } {
-  const ref = getTreeShape(GROW_DAYS);
-  const placed: [number, number][] = [];
-  const make = (count: number, ch: number, margin: number): Slot[] =>
-    Array.from({ length: count }, (_, i) => {
-      let best: Slot = [0, 0];
-      let bestPx: [number, number] = [0, 0];
-      let bestD = -1;
-      for (let k = 0; k < 12; k++) {
-        // sqrt ชดเชยทรงสามเหลี่ยม: ยอดแคบได้ของน้อยกว่าโคน (สูงสุดราว 81% ของพุ่มใบ)
-        const slot: Slot = [
-          0.03 + (1 - Math.sqrt(1 - 0.95 * hashRand(seed, i * 16 + k, ch))),
-          hashRand(seed, i * 16 + k, ch + 1) * 2 - 1,
-        ];
-        const px = toPx(ref, slot, margin);
-        if (!px) continue;
-        let d = Infinity;
-        for (const q of placed) d = Math.min(d, Math.hypot(q[0] - px[0], q[1] - px[1]));
-        if (d > bestD) {
-          best = slot;
-          bestPx = px;
-          bestD = d;
-        }
-      }
-      placed.push(bestPx);
-      return best;
-    });
-  return { orn: make(ornamentCount(GROW_DAYS), CH.orn, ORN_MARGIN), bow: make(ribbonCount(GROW_DAYS), CH.bow, BOW_MARGIN) };
+/** กองดินกับเมล็ด (วันที่ 0) ขนาดตาม scale */
+function drawMound(p: SceneParams, dim: (c: string, k?: number) => string): void {
+  const { ctx, centerX: ox, groundY: oy, scale } = p;
+  const h = Math.max(3, Math.round(4 * scale));
+  const hw = Math.max(4, Math.round(6 * scale));
+  for (let i = 0; i < h; i++) {
+    const half = Math.round(hw * Math.pow((i + 1) / h, 0.6));
+    const y = oy - h + i;
+    rect(ctx, ox - half, y, half * 2, 1, dim(PALETTE.soil));
+    // ด้านขวาและแถวล่างเป็นเงา
+    rect(ctx, ox + Math.round(half * 0.4), y, half - Math.round(half * 0.4), 1, dim(PALETTE.trunkDark));
+    if (i === h - 1) rect(ctx, ox - half, y, half * 2, 1, dim(PALETTE.trunkDark));
+  }
+  const sd = Math.max(1, Math.round(scale));
+  rect(ctx, ox - sd, oy - h - sd + 1, sd * 2, sd + 1, dim(PALETTE.seed, 0.3));
+  pixel(ctx, ox - sd, oy - h - sd + 1, dim(PALETTE.starGlow, 0.3));
 }
 
 export function createTree(): SceneLayer {
-  let prevDay = -1; // -1 = ยังไม่เคยวาด (เฟรมแรกไม่เล่นเอฟเฟกต์)
-  let shownH = 0; // ความสูงที่วาดจริงเฟรมก่อน (จุดเริ่มของเอฟเฟกต์โต)
-  let fromH = 0;
-  let animStart = -Infinity;
-  let slots: ReturnType<typeof layout> | undefined;
-  let slotsSeed = NaN;
-
   return {
     render(p: SceneParams): void {
-      const { ctx, seed } = p;
+      const { ctx, seed, scale: sc } = p;
       const ox = p.centerX;
       const oy = p.groundY;
       const dark = p.daylight.darkness;
       const dim = (c: string, k = 0.45) => mixColor(c, NAVY, dark * k);
+      const s = p.tree;
 
-      if (prevDay >= 0 && p.day > prevDay) {
-        animStart = p.timeMs;
-        fromH = shownH;
-      } else if (p.day < prevDay) {
-        animStart = -Infinity;
-      }
-      prevDay = p.day;
-
-      // ---------- วันที่ 0: กองดินกับเมล็ด ----------
-      if (p.tree.height === 0) {
-        shownH = 0;
-        drawSprite(
-          ctx,
-          MOUND,
-          { s: dim(PALETTE.soil), d: dim(PALETTE.trunkDark), e: dim(PALETTE.seed, 0.3), h: dim(PALETTE.starGlow, 0.3) },
-          ox - 4,
-          oy - MOUND.length,
-        );
+      if (s.height === 0) {
+        drawMound(p, dim);
         return;
       }
 
-      // ---------- เอฟเฟกต์โต: โตจากขนาดเดิม + เด้งยืดหด ----------
-      const t = (p.timeMs - animStart) / POP_MS;
-      const animating = t >= 0 && t < 1;
-      let s = p.tree;
-      if (animating && !p.reducedMotion) {
-        const ratio = Math.max(0.3, Math.min(1, fromH / s.height));
-        const grow = ratio + (1 - ratio) * (1 - Math.pow(1 - Math.min(1, t / 0.45), 3));
-        const amp = Math.min(0.25, Math.max(0.06, 1.5 / s.height));
-        const pop = amp * Math.sin(t * Math.PI * 3) * (1 - t);
-        s = scaleShape(s, grow * (1 - pop * 0.6), grow * (1 + pop));
+      // ---------- เงาใต้ต้นบนหิมะ ----------
+      const shRows = Math.max(2, Math.round(2.5 * sc));
+      const shHalf = s.baseHalfWidth * 1.1 + 2;
+      ctx.globalAlpha = 0.45;
+      for (let i = 0; i < shRows; i++) {
+        const half = Math.round(shHalf * Math.sqrt(1 - (i / shRows) * (i / shRows)));
+        rect(ctx, ox - half, oy + i, half * 2 + 1, 1, dim(PALETTE.snowNight, 0.3));
       }
-      shownH = s.height;
+      ctx.globalAlpha = 1;
 
       // ---------- ลำต้น (ยื่นขึ้นไปหลังชายใบ 1 แถว) ----------
-      const tw = s.trunkHalf * 2 + 1;
-      rect(ctx, ox - s.trunkHalf, oy - s.trunkHeight - 1, tw, s.trunkHeight + 1, dim(PALETTE.trunk));
-      rect(ctx, ox + s.trunkHalf - Math.floor(s.trunkHalf / 2), oy - s.trunkHeight - 1, Math.floor(s.trunkHalf / 2) + 1, s.trunkHeight + 1, dim(PALETTE.trunkDark));
-      if (s.trunkHeight > 2) rect(ctx, ox - s.trunkHalf, oy - s.trunkHeight, tw, 1, dim(PALETTE.trunkDark));
+      const th = s.trunkHalf;
+      const tw = th * 2 + 1;
+      rect(ctx, ox - th, oy - s.trunkHeight - 1, tw, s.trunkHeight + 1, dim(PALETTE.trunk));
+      rect(ctx, ox + th - Math.floor(th / 2), oy - s.trunkHeight - 1, Math.floor(th / 2) + 1, s.trunkHeight + 1, dim(PALETTE.trunkDark));
+      for (let y = 1; y < s.trunkHeight; y++) {
+        if (nz(seed, y, 0, 3) < 0.35) pixel(ctx, ox - th + 1 + Math.floor(nz(seed, y, 1, 3) * Math.max(1, th)), oy - y, dim(PALETTE.trunkDark));
+      }
+      if (s.trunkHeight > 2) rect(ctx, ox - th, oy - s.trunkHeight, tw, 1, dim(PALETTE.trunkDark));
 
       // ---------- ชั้นใบ: ล่างขึ้นบน ชั้นบนทับชั้นล่าง ----------
-      // 0 = ใต้ชั้น (มืดสุด), 1 = ด้านเงา, 2 = กลาง, 3 = ด้านรับแสง
-      const shades = [dim(PALETTE.leafDark), dim(PALETTE.leafMid), dim(PALETTE.leaf), dim(PALETTE.leafLight)];
+      // 0 = มืดสุด, 1 = เงา, 2 = กลาง, 3 = รับแสง, 4 = หิมะ, 5 = เงาหิมะ
+      const shades = [
+        dim(PALETTE.leafDark),
+        dim(PALETTE.leafMid),
+        dim(PALETTE.leaf),
+        dim(PALETTE.leafLight),
+        dim(PALETTE.snow, 0.35),
+        dim(PALETTE.snowShade, 0.35),
+      ];
+      const period = Math.max(4, Math.round(4 * sc)); // ระยะห่างกิ่ง
+      const bandH = Math.max(4, Math.round(5 * sc)); // ระยะห่างก้อนหิมะบนกิ่ง
+      const toothW = Math.max(2, Math.round(2 * sc));
       s.tiers.forEach((tier, ti) => {
         const rows = tier.bottomY - tier.topY;
-        const under = rows >= 6 ? 2 : rows >= 3 ? 1 : 0;
+        const under = rows >= 6 ? Math.max(2, Math.round(1.5 * sc)) : rows >= 3 ? 1 : 0;
+        const toothH = rows >= 3 ? Math.max(1, Math.round(1.5 * sc)) : 0;
         for (let y = tier.topY; y < tier.bottomY; y++) {
           const rb = tier.bottomY - 1 - y; // แถวนับจากชายล่างของชั้น
           const w = tier.bottomHalf + (tier.topHalf - tier.bottomHalf) * (rows > 1 ? rb / (rows - 1) : 0);
           const key = ti * 100 + rb;
-          // ขอบหยัก: แต่ละแถวหด/ยื่น 1px แบบสุ่มคงที่
           const jag = (ch: number) => {
             if (w < 3) return 0;
             const r = hashRand(seed, key, ch);
@@ -174,17 +99,46 @@ export function createTree(): SceneLayer {
           };
           const wl = Math.round(w) + jag(CH.jagL);
           const wr = Math.round(w) + jag(CH.jagR);
-          const teeth = rb === 0 && rows >= 3 && w >= 3; // ชายล่างเป็นซี่ฟัน
           const litTo = -wl + Math.floor(w * 0.25);
+          const toothRow = w >= 3 && rb <= toothH;
+          // หิมะเกาะบนกิ่งที่ลาดด้านบน: แถวบนของแต่ละแถบเต็ม แถวล่างสั้นกว่าและเป็นเงา
+          const phase = rb % bandH;
+          const band = Math.floor(rb / bandH);
+          let snowLenL = 0;
+          let snowLenR = 0;
+          let snowCol = 4;
+          if (w >= 4 && rb > rows * 0.3 && phase >= bandH - 2) {
+            const len = Math.max(2, Math.round((2 + hashRand(seed, ti * 64 + band, CH.snowLen) * 3) * (sc / 1.5)));
+            const k = phase === bandH - 1 ? len : len - 1;
+            snowCol = phase === bandH - 1 ? 4 : 5;
+            if (hashRand(seed, ti * 64 + band, CH.snow) < 0.6) snowLenL = k;
+            if (hashRand(seed, ti * 64 + band, CH.snow + 1) < 0.6) snowLenR = k;
+          }
           let runStart = -wl;
           let runShade = -1;
           for (let x = -wl; x <= wr + 1; x++) {
             let sh = -1; // -1 = โปร่งใส
-            if (x <= wr && !(teeth && hashRand(seed, key * 128 + x + 64, CH.teeth) < 0.4)) {
-              sh = rb < under ? 0 : w >= 3 && x <= litTo ? 3 : x > w * 0.3 ? 1 : 2;
-              const r = hashRand(seed, key * 128 + x + 64, CH.speck);
-              if (r < 0.1) sh = Math.max(0, sh - 1);
-              else if (r > 0.92) sh = Math.min(3, sh + 1);
+            if (x <= wr) {
+              // ชายล่างเป็นซี่ฟัน: คอลัมน์ละความยาวไม่เท่ากัน
+              const cell = Math.floor((x + 256) / toothW);
+              const cut = toothRow ? Math.floor(nz(seed, ti, cell, 7) * (toothH + 1)) : 0;
+              if (rb >= cut) {
+                const u = x < 0 ? -x : x;
+                sh = rb < under ? 0 : w >= 3 && x <= litTo ? 3 : x > w * 0.3 ? 1 : 2;
+                const r = nz(seed, key, x, 1);
+                if (r < 0.1) sh--;
+                else if (r > 0.92) sh++;
+                // กิ่งโค้งห้อยลง (เส้นเข้มเฉียง) และปลายใบสว่างสลับแถว
+                if (u >= 2 && u < w - 1 && rb >= under) {
+                  const ph = (rb + (u >> 1) + ti * 3) % period;
+                  if (ph === 0) sh--;
+                  else if (ph === 1 && ((u + rb) & 1) === 0 && nz(seed, key, x, 2) < 0.7) sh++;
+                }
+                sh = sh < 0 ? 0 : sh > 3 ? 3 : sh;
+                // หิมะบนลาดกิ่ง และปลายซี่ฟันที่ชายล่าง
+                if ((snowLenL && x + wl < snowLenL) || (snowLenR && wr - x < snowLenR)) sh = snowCol;
+                else if (toothRow && rb === cut && nz(seed, ti, cell, 8) < 0.35) sh = 4;
+              }
             }
             if (sh !== runShade) {
               if (runShade >= 0) rect(ctx, ox + runStart, oy + y, x - runStart, 1, shades[runShade]);
@@ -195,63 +149,15 @@ export function createTree(): SceneLayer {
         }
       });
 
-      // ---------- หิมะเกาะขอบชั้น ----------
-      const snow = dim(PALETTE.snow, 0.35);
-      const snowShade = dim(PALETTE.snowShade, 0.35);
-      s.tiers.forEach((tier, ti) => {
-        const rows = tier.bottomY - tier.topY;
-        if (tier.bottomHalf < 6 || rows < 4) return;
-        for (let j = 0; j < 2 + (ti % 2); j++) {
-          const side = (j + ti) % 2 ? 1 : -1;
-          const ax = Math.round((0.6 + 0.35 * hashRand(seed, ti * 8 + j, CH.snow)) * tier.bottomHalf);
-          const f = (tier.bottomHalf - ax) / (tier.bottomHalf - tier.topHalf);
-          const y = oy + Math.round(tier.bottomY - 1 - f * (rows - 1));
-          rect(ctx, ox + (side > 0 ? ax - 2 : -ax), y, 3, 1, snow);
-          pixel(ctx, ox + side * (ax - 1), y + 1, snowShade);
-        }
-      });
-
-      // ---------- ลูกบอล ----------
-      if (!slots || slotsSeed !== seed) {
-        slots = layout(seed);
-        slotsSeed = seed;
-      }
-      const hi = dim('#ffffff', 0.2);
-      for (let i = 0, n = ornamentCount(p.day); i < n; i++) {
-        const pos = toPx(s, slots.orn[i], ORN_MARGIN);
-        if (!pos) continue;
-        const [c, d] = BAUBLE_COLORS[Math.floor(hashRand(seed, i, CH.ornColor) * BAUBLE_COLORS.length)];
-        drawSprite(ctx, BAUBLE, { c: dim(c, 0.25), d: dim(d, 0.25), h: hi }, ox + pos[0] - 1, oy + pos[1] - 1);
-      }
-
-      // ---------- โบว์ ----------
-      for (let i = 0, n = ribbonCount(p.day); i < n; i++) {
-        const pos = toPx(s, slots.bow[i], BOW_MARGIN);
-        if (!pos) continue;
-        const [c, d, k] = BOW_COLORS[Math.floor(hashRand(seed, i, CH.bowColor) * BOW_COLORS.length)];
-        drawSprite(ctx, BOW, { c: dim(c, 0.25), d: dim(d, 0.25), k: dim(k, 0.25) }, ox + pos[0] - 2, oy + pos[1] - 1);
-      }
-
-      // ---------- ดาว (ไม่หรี่ตอนกลางคืน) + แสงเรืองเต้นช้าๆ ----------
-      if (s.hasStar) {
-        const cy = oy - s.height - 3;
-        const pulse = p.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(p.timeMs / 700);
-        ctx.globalAlpha = (0.12 + 0.12 * pulse) * (0.6 + 0.4 * dark);
-        rect(ctx, ox - 5, cy - 1, 11, 3, PALETTE.starGlow);
-        rect(ctx, ox - 1, cy - 5, 3, 11, PALETTE.starGlow);
-        rect(ctx, ox - 3, cy - 3, 7, 7, PALETTE.starGlow);
-        ctx.globalAlpha = 1;
-        drawSprite(ctx, STAR, { s: PALETTE.star, g: PALETTE.starGlow }, ox - 3, cy - 3);
-        pixel(ctx, ox, cy, PALETTE.starGlow);
-      }
-
-      // ---------- ประกายรอบต้นตอนโต (reduced motion: จุดนิ่งสั้นๆ) ----------
-      if (animating && (!p.reducedMotion || t < 0.45)) {
-        for (let j = 0; j < SPARKLES; j++) {
+      // ---------- ประกายรอบต้นตอนโต (reduced motion: จุดนิ่ง) ----------
+      const t = p.growT;
+      if (t !== null) {
+        const n = p.reducedMotion ? 4 : SPARKLES;
+        for (let j = 0; j < n; j++) {
           const idx = p.day * 16 + j;
           const y = -Math.round((0.3 + 0.75 * hashRand(seed, idx, CH.spark)) * s.height);
           const side = j % 2 ? 1 : -1;
-          const x = ox + side * Math.round(halfWidthAt(s, y) + 2 + 3 * hashRand(seed, idx, CH.spark + 1));
+          const x = ox + side * Math.round(halfWidthAt(p.tree, y) + 2 + 3 * sc * hashRand(seed, idx, CH.spark + 1));
           const color = j % 3 ? PALETTE.starGlow : PALETTE.white;
           if (p.reducedMotion) {
             pixel(ctx, x, oy + y, color);
@@ -270,3 +176,4 @@ export function createTree(): SceneLayer {
     },
   };
 }
+
