@@ -10,9 +10,6 @@ const DIM = COLORS.map((c) => mixColor(c, PALETTE.leafDark, 0.55)); // สีห
 const MAX = lightCount(GROW_DAYS);
 /** จำนวนซิกแซกคงที่ (ค่าของต้นวันที่ 25) หลอดเดิมจึงไม่สลับข้างเมื่อต้นโต */
 const ZIGS = 10;
-/** ซ่อนไฟระหว่างเอฟเฟกต์ต้นโต (เท่ากับ POP_MS ใน tree.ts) เพราะต้นถูกย่อ/ยืดชั่วคราว */
-const HIDE_MS = 1300;
-
 /** คลื่นสามเหลี่ยม คาบ 2 ช่วงค่า -1..1 */
 const tri = (s: number) => {
   const m = s % 2;
@@ -29,16 +26,10 @@ export function createLights(): SceneLayer {
   let bulbs: Float32Array | null = null;
   let colorIdx: Uint8Array | null = null;
   let bulbSeed = 0;
-  let prevDay = -1;
-  let hideUntil = -Infinity;
 
   return {
     render(p) {
       const { ctx, tree, seed } = p;
-      if (prevDay >= 0 && p.day > prevDay && !p.reducedMotion) hideUntil = p.timeMs + HIDE_MS;
-      else if (p.day < prevDay) hideUntil = -Infinity;
-      prevDay = p.day;
-      if (p.timeMs < hideUntil) return;
       const count = Math.min(MAX, lightCount(p.day));
       if (count === 0 || tree.tiers.length === 0) return;
       const yTop = -tree.height + 2;
@@ -82,6 +73,8 @@ export function createLights(): SceneLayer {
 
       // หลอดไฟ
       const dark = p.daylight.darkness;
+      const big = p.scale >= 1.2;
+      const sz = big ? 2 : 1;
       for (let i = 0; i < count; i++) {
         const t = bulbs[i * 3];
         const y = Math.round(yTop + rows * t);
@@ -90,20 +83,28 @@ export function createLights(): SceneLayer {
         const blink = p.reducedMotion ? 1 : 0.5 + 0.5 * Math.sin(p.timeMs * bulbs[i * 3 + 1] + bulbs[i * 3 + 2]);
         const c = colorIdx[i];
 
-        ctx.fillStyle = COLORS[c];
-        const halo = 0.35 * dark * blink;
+        const halo = 0.3 * dark * blink;
         if (halo > 0.02) {
+          // ฮาโลเป็นรูปข้าวหลามตัด รัศมี ~3 (ของ 1px: กากบาทเล็ก)
+          ctx.fillStyle = COLORS[c];
           ctx.globalAlpha = halo;
-          ctx.fillRect(x - 1, sy, 3, 1);
-          ctx.fillRect(x, sy - 1, 1, 3);
+          if (big) {
+            ctx.fillRect(x - 2, sy - 1, 6, 4);
+            ctx.globalAlpha = halo * 0.6;
+            ctx.fillRect(x - 3, sy, 8, 2);
+            ctx.fillRect(x, sy - 2, 2, 6);
+          } else {
+            ctx.fillRect(x - 1, sy, 3, 1);
+            ctx.fillRect(x, sy - 1, 1, 3);
+          }
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = DIM[c];
-        ctx.fillRect(x, sy, 1, 1);
+        ctx.fillRect(x, sy, sz, sz);
         // กลางวันสว่างสุดแค่ครึ่งเดียว กลางคืนสว่างเต็ม
         ctx.globalAlpha = blink * (0.5 + 0.5 * dark);
         ctx.fillStyle = COLORS[c];
-        ctx.fillRect(x, sy, 1, 1);
+        ctx.fillRect(x, sy, sz, sz);
       }
       ctx.globalAlpha = 1;
     },

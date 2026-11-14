@@ -5,6 +5,8 @@ import type { SceneLayer } from '../types';
 
 const BAND = 6; // ความสูงแถบสีท้องฟ้า (px)
 const MAX_STARS = 120;
+const AURORA_BANDS = 4;
+const SPARKLES = 40;
 
 const MOON = ['..MMMM..', '.MMMMmM.', 'MMMMMMMM', 'MMmMMMMM', 'MMMMMMMM', 'MMMMMmmM', '.MMMMMM.', '..MMMM..'];
 const MOON_LEGEND = { M: PALETTE.moon, m: mixColor(PALETTE.moon, PALETTE.skyNight[1], 0.3) };
@@ -64,6 +66,9 @@ export function createSky(): SceneLayer {
   // ดาว: [fx, fy, phase, speed] ตำแหน่งเป็นสัดส่วนของจอ จึงไม่ต้องคำนวณใหม่ตอน resize
   let stars: Float32Array | null = null;
   let starSeed = 0;
+  // ประกายหิมะ: [fx, fy, phase, speed]
+  let sparks: Float32Array | null = null;
+  let sparkSeed = 0;
 
   return {
     render(p) {
@@ -106,6 +111,31 @@ export function createSky(): SceneLayer {
         }
       }
 
+      // --- ออโรราจาง ๆ (กลางคืนเท่านั้น) แถบแนวตั้งกว้าง alpha ต่ำ ---
+      if (dark > 0.05) {
+        const t = p.reducedMotion ? 0 : p.timeMs / 1000;
+        const top = 1;
+        const maxH = Math.round(groundY * 0.42);
+        for (let b = 0; b < AURORA_BANDS; b++) {
+          const cx = (0.12 + 0.76 * hashRand(seed, b, 30)) * width + (p.reducedMotion ? 0 : Math.sin(t * 0.05 + b) * 6);
+          const half = Math.max(14, Math.round(width * (0.08 + 0.06 * hashRand(seed, b, 31))));
+          const h0 = maxH * (0.55 + 0.45 * hashRand(seed, b, 32));
+          const ph = hashRand(seed, b, 33) * 6.28;
+          ctx.fillStyle = PALETTE.aurora[b % PALETTE.aurora.length];
+          const x0 = Math.round(cx - half);
+          for (let x = Math.max(0, x0); x < Math.min(width, x0 + half * 2); x += 2) {
+            const f = 1 - Math.abs((x - cx) / half); // 0..1 กลางแถบสว่างสุด
+            const h = Math.round(h0 * (0.7 + 0.3 * Math.sin(x * 0.12 + t * 0.5 + ph)) * (0.4 + 0.6 * f));
+            const a = dark * 0.16 * (0.75 + 0.25 * Math.sin(t * 0.4 + ph + x * 0.05));
+            ctx.globalAlpha = a * (0.5 + 0.5 * f);
+            ctx.fillRect(x, top, 2, h);
+            ctx.globalAlpha = a * 0.5 * f; // แกนสว่างส่วนบน
+            ctx.fillRect(x, top, 2, Math.round(h * 0.5));
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
       // --- พระจันทร์ / พระอาทิตย์ (อยู่ชิดขอบบน เว้นทางให้เลื่อนซานต้า) ---
       const bodyY = Math.max(3, Math.round(groundY * 0.05));
       if (dark > 0.02) {
@@ -130,6 +160,32 @@ export function createSky(): SceneLayer {
       ctx.fillStyle = snow;
       ctx.fillRect(0, groundY, width, height - groundY);
       wavyFill(ctx, width, groundY + Math.round((height - groundY) * 0.6), height, 2, ph + 2, shade); // เงากองหิมะด้านล่าง
+
+      // --- ประกายหิมะบนพื้น ---
+      if (!sparks || sparkSeed !== seed) {
+        sparkSeed = seed;
+        sparks = new Float32Array(SPARKLES * 4);
+        for (let i = 0; i < SPARKLES; i++) {
+          sparks[i * 4] = hashRand(seed, i, 40);
+          sparks[i * 4 + 1] = hashRand(seed, i, 41);
+          sparks[i * 4 + 2] = hashRand(seed, i, 42) * Math.PI * 2;
+          sparks[i * 4 + 3] = 1 + hashRand(seed, i, 43) * 2.5;
+        }
+      }
+      const sh = height - groundY;
+      if (sh > 2) {
+        const st = p.reducedMotion ? 0 : p.timeMs / 1000;
+        const n2 = Math.min(SPARKLES, Math.max(8, Math.floor(width / 8)));
+        ctx.fillStyle = PALETTE.white;
+        for (let i = 0; i < n2; i++) {
+          const o = i * 4;
+          const v = p.reducedMotion ? (i % 3 === 0 ? 0.8 : 0) : Math.sin(st * sparks[o + 3] + sparks[o + 2]);
+          if (v < 0.5) continue; // วาบเป็นช่วงสั้น ๆ
+          ctx.globalAlpha = (0.4 + 0.6 * v) * (1 - dark * 0.4);
+          ctx.fillRect(Math.floor(sparks[o] * width), groundY + Math.floor(sparks[o + 1] * (sh - 1)), 1, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
     },
   };
 }
