@@ -1,0 +1,29 @@
+/* ฐานร่วมของทั้งสองหน้า */
+:root {
+  --navy: #0b1030;
+  --green: #1b5e3c;
+  --green-light: #2a7d4a;
+  --red: #c8322b;
+  --gold: #f2c14e;
+  --cream: #fbf7ee;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1030;
+}
+
+#scene {
+  position: fixed;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* เมาส์นิ่งเกินกำหนด: ซ่อนเคอร์เซอร์ */
+.cursor-hidden,
+.cursor-hidden * {
+  cursor: none;
+}
