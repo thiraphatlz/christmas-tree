@@ -185,6 +185,8 @@ export interface AppController {
   setSimulatedNow(date: Date): void;
   /** ให้ซานต้าโผล่ทันที (หน้า debug) */
   triggerSanta(): void;
+  /** ขนาดฉากของเฟรมล่าสุด (logical px) และเวลาวาดเฉลี่ยต่อเฟรม (ms); null ก่อนเฟรมแรก */
+  getScene(): { width: number; height: number; centerX: number; groundY: number; treeMax: number; scale: number; frameMs: number } | null;
   /** เรียก cb ทันที แล้วประมาณวินาทีละครั้ง และทุกครั้งที่ state เปลี่ยน */
   subscribe(cb: (state: AppState) => void): void;
 }

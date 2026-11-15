@@ -4,9 +4,11 @@ import { AudioManager } from './audio/AudioManager';
 import { GROW_DAYS } from './config';
 import { hasSkirt, hasStar, giftCount, lightCount, ornamentCount, ribbonCount, tierCount, tinselCount, treeHeight } from './core/growth';
 import { isSantaWindow } from './core/santaSchedule';
+import { DETAIL_LAYERS, getLayerStates, summarizeLayers } from './detail/layers';
+import { getMarketCounts, getMarketLayout } from './scene/market';
 import { infoText } from './ui/info';
 import { initAudioUnlock, initFullscreenKey, toggleFullscreen } from './ui/immersive';
-import type { AppState, DaylightMode } from './types';
+import type { AppState, DaylightMode, DetailViews } from './types';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -106,7 +108,35 @@ const cells = rows.map(([label]) => {
   return dd;
 });
 
+// ---------- ชั้นรายละเอียด ----------
+const layerCells = new Map<string, HTMLElement>();
+for (const def of DETAIL_LAYERS) {
+  const dt = document.createElement('dt');
+  const dd = document.createElement('dd');
+  dt.textContent = def.label;
+  $('layers').append(dt, dd);
+  layerCells.set(def.id, dd);
+}
+
+function renderLayers(s: AppState): void {
+  const states = getLayerStates(s.day);
+  const views: DetailViews = {};
+  for (const st of states) {
+    views[st.id] = { ...st, prevCount: st.count, appearT: null };
+    const cell = layerCells.get(st.id);
+    if (cell) cell.textContent = st.active ? `เปิด · ${st.count}/${st.maxCount} ชิ้น · เข้ม ${st.intensity.toFixed(2)}` : `ปิด (เริ่ม ${st.unlockDay} ธ.ค.)`;
+  }
+  const sum = summarizeLayers(s.day);
+  const sc = app.getScene();
+  const layout = sc ? getMarketLayout(sc.width, sc.centerX, sc.groundY, sc.treeMax, sc.scale) : null;
+  const drawn = layout ? getMarketCounts(views, layout) : { stalls: 0, people: 0 };
+  $('layers-summary').textContent =
+    `เปิด ${sum.active} จาก ${sum.total} ชั้น · ร้านที่วาด ${drawn.stalls} · ผู้คนที่วาด ${drawn.people}` +
+    (sc ? ` · เวลาวาด ${sc.frameMs.toFixed(2)} ms/เฟรม` : '');
+}
+
 app.subscribe((s) => {
+  renderLayers(s);
   rows.forEach(([, f], i) => (cells[i].textContent = f(s)));
   const info = infoText(s.day, s.now);
   $('info-title').textContent = info.title;

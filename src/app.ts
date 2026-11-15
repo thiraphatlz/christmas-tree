@@ -105,6 +105,8 @@ export function createApp(canvas: HTMLCanvasElement): AppController {
   let last = performance.now();
   let timeMs = 0;
   let lastSecond = -1;
+  let frameMs = 0;
+  let scene: ReturnType<AppController['getScene']> = null;
 
   function frame(t: number): void {
     const dt = Math.min(100, Math.max(0, t - last));
@@ -146,7 +148,10 @@ export function createApp(canvas: HTMLCanvasElement): AppController {
 
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, width, height);
+    const t0 = performance.now();
     for (const layer of layers) layer.render(params);
+    frameMs += (performance.now() - t0 - frameMs) * 0.05; // ค่าเฉลี่ยเคลื่อนที่ของเวลาวาด
+    scene = { width, height, centerX: params.centerX, groundY, treeMax, scale, frameMs };
 
     const second = Math.floor(now.getTime() / 1000);
     if (second !== lastSecond) {
@@ -169,6 +174,7 @@ export function createApp(canvas: HTMLCanvasElement): AppController {
       notify();
     },
     triggerSanta: () => santa.trigger(),
+    getScene: () => scene,
     subscribe(cb) {
       subscribers.push(cb);
       cb(getState());
