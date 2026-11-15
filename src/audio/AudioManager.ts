@@ -6,8 +6,8 @@ import { scheduleLoop } from './music';
 
 /** ไฟล์เสียงซานต้า: วางที่ public/audio/santa-hohoho.mp3 (ถ้าไม่มีไฟล์ จะเงียบ) */
 const SANTA_URL = '/audio/santa-hohoho.mp3';
-const MUSIC_VOLUME = 0.22;
-const SANTA_VOLUME = 0.7;
+const MUSIC_VOLUME = 0.25;
+const SANTA_VOLUME = 0.12;
 
 // ค่าเริ่มต้นคือปิดเสียง จะเปิดก็ต่อเมื่อผู้ใช้เคยเลือกเปิดไว้
 let muted = true;
