@@ -9,10 +9,10 @@ const SANTA_URL = '/audio/santa-hohoho.mp3';
 const MUSIC_VOLUME = 0.25;
 const SANTA_VOLUME = 0.12;
 
-// ค่าเริ่มต้นคือปิดเสียง จะเปิดก็ต่อเมื่อผู้ใช้เคยเลือกเปิดไว้
-let muted = true;
+// ค่าเริ่มต้นคือเปิดเสียง (เพลงเริ่มหลังคลิก/แตะครั้งแรก) จะปิดก็ต่อเมื่อผู้ใช้เคยกด M ปิดไว้
+let muted = false;
 try {
-  muted = localStorage.getItem(MUTE_STORAGE_KEY) !== '0';
+  muted = localStorage.getItem(MUTE_STORAGE_KEY) === '1';
 } catch {
   // localStorage ใช้ไม่ได้ (โหมดส่วนตัว ฯลฯ) ใช้ค่าเริ่มต้น
 }
